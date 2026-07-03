@@ -28,9 +28,12 @@ export function clearTokens(): void {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
-export function getAccessToken(): string | null {
+// The API Gateway JWT authorizer validates the `aud` claim, which Cognito only
+// puts on ID tokens (access tokens carry `client_id` instead) - so requests
+// must be authorized with the ID token, not the access token.
+export function getIdToken(): string | null {
   const tokens = getTokens();
   if (!tokens) return null;
   if (Date.now() >= tokens.expiresAt) return null;
-  return tokens.accessToken;
+  return tokens.idToken;
 }

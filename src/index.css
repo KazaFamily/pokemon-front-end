@@ -270,6 +270,18 @@ a {
 .type-badge--water { background: #6890f0; }
 .type-badge--electric { background: #f8d030; }
 .type-badge--normal { background: #a8a878; }
+.type-badge--ice { background: #98d8d8; }
+.type-badge--fighting { background: #c03028; color: #fff; }
+.type-badge--ground { background: #e0c068; }
+.type-badge--flying { background: #a890f0; }
+.type-badge--psychic { background: #f85888; color: #fff; }
+.type-badge--bug { background: #a8b820; }
+.type-badge--rock { background: #b8a038; }
+.type-badge--ghost { background: #705898; color: #fff; }
+.type-badge--dragon { background: #7038f8; color: #fff; }
+.type-badge--dark { background: #705848; color: #fff; }
+.type-badge--steel { background: #b8b8d0; }
+.type-badge--fairy { background: #ee99ac; }
 
 /* HP bar */
 
@@ -371,6 +383,60 @@ a {
 .move-selector__meta {
   font-size: 11px;
   opacity: 0.8;
+}
+
+/* TCG card & battle */
+
+.tcg-card__meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.tcg-card__weakness { color: var(--danger); }
+.tcg-card__resistance { color: var(--success); }
+
+.tcg-card__attacks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.tcg-status-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.tcg-bench {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.tcg-bench__cards {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.tcg-bench__card {
+  font-size: 13px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.tcg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
 /* Battle log */

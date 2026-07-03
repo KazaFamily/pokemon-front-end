@@ -13,6 +13,7 @@ export function NavBar() {
       {isMockApi && <span className="nav-bar__badge">MOCK API</span>}
       <nav className="nav-bar__links">
         <Link to="/">Lobby</Link>
+        <Link to="/tcg">TCG</Link>
       </nav>
       {isAuthenticated && (
         <div className="nav-bar__auth">

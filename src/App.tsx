@@ -3,6 +3,9 @@ import { NavBar } from "./components/NavBar";
 import { LobbyPage } from "./pages/LobbyPage";
 import { BattleSetupPage } from "./pages/BattleSetupPage";
 import { BattlePage } from "./pages/BattlePage";
+import { TcgLobbyPage } from "./pages/TcgLobbyPage";
+import { TcgDeckSetupPage } from "./pages/TcgDeckSetupPage";
+import { TcgBattlePage } from "./pages/TcgBattlePage";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 
 function App() {
@@ -18,6 +21,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <BattleSetupPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/tcg" element={<TcgLobbyPage />} />
+          <Route path="/tcg/battle/:battleId" element={<TcgBattlePage />} />
+          <Route
+            path="/tcg/setup"
+            element={
+              <ProtectedRoute>
+                <TcgDeckSetupPage />
               </ProtectedRoute>
             }
           />

@@ -47,7 +47,77 @@ export interface Trainer {
   roster: BattleCard[];
   /** Full owned collection of randomly-drawn cards for this game. */
   battleCards: BattleCard[];
+  /** Full owned collection of 20 randomly-drawn TCG cards (independent of battleCards). */
+  tcgCards: TcgCard[];
+  /** Current TCG match deck - a chosen subset of tcgCards - what createTcgBattle uses. */
+  tcgDeck: TcgCard[];
 }
+
+// --- TCG mode: an independent card-battle mode with its own dataset and
+// engine (energy/bench/prizes/weakness-resistance), sharing only the naming
+// convention and auth pattern with the video-game mode above. ---
+
+export interface TcgAttack {
+  name: string;
+  energyCost: number;
+  damage: number;
+}
+
+/** One of a trainer's 20 owned TCG cards - static reference data. */
+export interface TcgCard {
+  cardId: number;
+  name: string;
+  energyType: PokemonTypeName;
+  hp: number;
+  weakness: PokemonTypeName | null;
+  resistance: PokemonTypeName | null;
+  retreatCost: number;
+  attacks: TcgAttack[];
+  spriteUrl: string;
+}
+
+/** A card currently in play (active or benched) during a TCG match -
+ * denormalized from TcgCard plus match state, so the frontend can render it
+ * with no separate card lookup (same idea as ActivePokemon below). */
+export interface TcgInPlayCard {
+  cardId: number;
+  name: string;
+  energyType: PokemonTypeName;
+  maxHp: number;
+  currentHp: number;
+  weakness: PokemonTypeName | null;
+  resistance: PokemonTypeName | null;
+  retreatCost: number;
+  attacks: TcgAttack[];
+  spriteUrl: string;
+  energyAttached: number;
+}
+
+export interface TcgSideState {
+  active: TcgInPlayCard | null;
+  bench: TcgInPlayCard[];
+  reserve: number[];
+  prizesRemaining: number;
+  energyAttachedThisTurn: boolean;
+  retreatedThisTurn: boolean;
+}
+
+export interface TcgBattle {
+  battleId: string;
+  trainer1Id: string;
+  trainer2Id: string;
+  turn: number;
+  turnSide: BattleSideKey;
+  side1: TcgSideState;
+  side2: TcgSideState;
+  log: string[];
+  status: BattleStatus;
+  winner: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TcgActionType = "attach-energy" | "retreat" | "attack" | "end-turn";
 
 export interface ActivePokemon {
   pokemonId: number;
