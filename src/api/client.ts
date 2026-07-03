@@ -1,4 +1,5 @@
-import type { Battle, PokemonSpecies, Trainer } from "../types";
+import type { Battle, Trainer } from "../types";
+import type { TokenSet } from "../auth/tokenStore";
 import { getAccessToken } from "../auth/tokenStore";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -34,37 +35,43 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface LoginResult {
+  trainer: Trainer;
+  tokens: Omit<TokenSet, "expiresAt"> & { expiresIn: number };
+}
+
 // Real backend-backed implementation of the API surface the app needs.
 // Swap `src/api/index.ts` to point here once VITE_API_BASE_URL is live.
 export const realApi = {
-  listPokemon: () => request<PokemonSpecies[]>("/pokemon"),
-
-  createTrainer: (name: string) =>
-    request<Trainer>("/trainers", { method: "POST", body: JSON.stringify({ name }) }),
+  // Login has no password of its own - typing an existing trainer's exact name logs
+  // you in as them (creating them, with 20 random battle cards, on first login).
+  login: (name: string) =>
+    request<LoginResult>("/auth/login", { method: "POST", body: JSON.stringify({ name }) }),
 
   getTrainer: (trainerId: string) => request<Trainer>(`/trainers/${trainerId}`),
 
-  setTrainerRoster: (trainerId: string, pokemonIds: string[]) =>
-    request<Trainer>(`/trainers/${trainerId}/roster`, {
+  setRoster: (trainerId: string, pokemonIds: number[]) =>
+    request<{ trainerId: string; roster: Trainer["roster"] }>(`/trainers/${trainerId}/roster`, {
       method: "PUT",
       body: JSON.stringify({ pokemonIds }),
     }),
 
-  createBattle: (trainerId: string, opponentTrainerId: string) =>
-    request<Battle>("/battles", {
-      method: "POST",
-      body: JSON.stringify({ trainerId, opponentTrainerId }),
-    }),
+  rerollBattleCards: (trainerId: string) =>
+    request<{ trainerId: string; battleCards: Trainer["battleCards"]; roster: Trainer["roster"] }>(
+      `/trainers/${trainerId}/battle-cards/reroll`,
+      { method: "POST" },
+    ),
+
+  createBattle: (trainer1Id: string, trainer2Id: string) =>
+    request<Battle>("/battles", { method: "POST", body: JSON.stringify({ trainer1Id, trainer2Id }) }),
 
   getBattle: (battleId: string) => request<Battle>(`/battles/${battleId}`),
 
-  submitMove: (battleId: string, trainerId: string, moveId: string) =>
-    request<Battle>(`/battles/${battleId}/moves`, {
+  submitMove: (battleId: string, trainerId: string, moveName: string) =>
+    request<unknown>(`/battles/${battleId}/moves`, {
       method: "POST",
-      body: JSON.stringify({ trainerId, moveId }),
+      body: JSON.stringify({ trainerId, moveName }),
     }),
-
-  healthCheck: () => request<{ ok: boolean }>("/health"),
 };
 
 export type Api = typeof realApi;

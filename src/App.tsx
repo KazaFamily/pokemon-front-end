@@ -1,10 +1,8 @@
 import { Route, Routes } from "react-router-dom";
 import { NavBar } from "./components/NavBar";
 import { LobbyPage } from "./pages/LobbyPage";
-import { TrainerSetupPage } from "./pages/TrainerSetupPage";
+import { BattleSetupPage } from "./pages/BattleSetupPage";
 import { BattlePage } from "./pages/BattlePage";
-import { SignInPage } from "./pages/SignInPage";
-import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 
 function App() {
@@ -15,13 +13,11 @@ function App() {
         <Routes>
           <Route path="/" element={<LobbyPage />} />
           <Route path="/battle/:battleId" element={<BattlePage />} />
-          <Route path="/sign-in" element={<SignInPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route
-            path="/trainer"
+            path="/battle/setup"
             element={
               <ProtectedRoute>
-                <TrainerSetupPage />
+                <BattleSetupPage />
               </ProtectedRoute>
             }
           />

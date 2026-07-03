@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "react";
-import type { BattleLogEntry } from "../types";
 
 interface BattleLogProps {
-  entries: BattleLogEntry[];
+  entries: string[];
 }
 
 export function BattleLog({ entries }: BattleLogProps) {
@@ -16,9 +15,9 @@ export function BattleLog({ entries }: BattleLogProps) {
     <div className="battle-log">
       <div className="battle-log__title">Battle Log</div>
       <div className="battle-log__entries">
-        {entries.map((entry) => (
-          <div key={entry.id} className="battle-log__entry">
-            {entry.message}
+        {entries.map((message, i) => (
+          <div key={i} className="battle-log__entry">
+            {message}
           </div>
         ))}
         <div ref={endRef} />

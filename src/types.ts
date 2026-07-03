@@ -1,66 +1,80 @@
-// Shared domain types. Adapt these once the real pokemon-battle-apis response shape is known.
+// Shared domain types, matching pokemon-battle-apis's actual response shapes
+// (services/api/src/lib/types.ts and battle-engine/src/types.ts in that repo).
 
-export interface PokemonType {
-  name: string;
-}
+export type PokemonTypeName =
+  | "normal" | "fire" | "water" | "electric" | "grass" | "ice"
+  | "fighting" | "poison" | "ground" | "flying" | "psychic" | "bug"
+  | "rock" | "ghost" | "dragon" | "dark" | "steel" | "fairy";
+
+export type DamageClass = "physical" | "special" | "status";
+export type StatusCondition = "burn" | "poison" | "paralysis" | null;
 
 export interface Move {
-  id: string;
-  name: string;
-  type: string;
-  power: number | null;
-  accuracy: number | null;
+  name: string; // PokeAPI move slug, e.g. "thunder-shock" - also the move identifier
+  type: PokemonTypeName;
+  power: number;
+  accuracy: number;
   pp: number;
+  damageClass: DamageClass;
 }
 
-export interface PokemonSpecies {
-  id: string;
+export interface Stats {
+  hp: number;
+  attack: number;
+  defense: number;
+  specialAttack: number;
+  specialDefense: number;
+  speed: number;
+}
+
+/** A single owned battle card: a specific Pokemon at a level with a moveset,
+ * enriched with display data (name/sprite/types/baseStats) by the backend. */
+export interface BattleCard {
+  pokemonId: number;
+  level: number;
+  moves: string[]; // move name slugs
   name: string;
   spriteUrl: string;
-  types: string[];
-  baseStats: {
-    hp: number;
-    attack: number;
-    defense: number;
-    speed: number;
-  };
-  moves: Move[];
+  types: PokemonTypeName[];
+  baseStats: Stats;
 }
 
 export interface Trainer {
-  id: string;
+  trainerId: string;
   name: string;
-  roster: PokemonSpecies[];
+  type: "human" | "ai";
+  /** Current battle-day loadout (subset of battleCards) - what createBattle uses. */
+  roster: BattleCard[];
+  /** Full owned collection of randomly-drawn cards for this game. */
+  battleCards: BattleCard[];
 }
-
-export type BattleStatus = "waiting" | "active" | "finished";
 
 export interface ActivePokemon {
-  pokemon: PokemonSpecies;
+  pokemonId: number;
+  name: string;
+  types: PokemonTypeName[];
+  level: number;
+  stats: Stats;
   currentHp: number;
   maxHp: number;
+  status: StatusCondition;
+  moves: Move[];
 }
 
-export interface BattleSide {
-  trainerId: string;
-  trainerName: string;
-  active: ActivePokemon;
-  hasSubmittedMove: boolean;
-}
-
-export interface BattleLogEntry {
-  id: string;
-  turn: number;
-  message: string;
-}
+export type BattleSideKey = "side1" | "side2";
+export type BattleStatus = "active" | "complete";
 
 export interface Battle {
-  id: string;
-  status: BattleStatus;
+  battleId: string;
+  trainer1Id: string;
+  trainer2Id: string;
   turn: number;
-  sides: [BattleSide, BattleSide];
-  log: BattleLogEntry[];
-  winnerTrainerId: string | null;
-  /** trainerId of whoever the viewer needs to wait on, if anyone */
-  waitingOn: string[];
+  active1: ActivePokemon;
+  active2: ActivePokemon;
+  pendingMoves: Partial<Record<BattleSideKey, string>>;
+  log: string[];
+  status: BattleStatus;
+  winner: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

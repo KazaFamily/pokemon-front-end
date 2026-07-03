@@ -36,7 +36,7 @@ export function useBattleState(battleId: string | null): UseBattleStateResult {
         setBattle(result);
         setError(null);
         setIsLoading(false);
-        if (result.status !== "finished") {
+        if (result.status !== "complete") {
           timer = setTimeout(poll, POLL_INTERVAL_MS);
         }
       } catch (err) {

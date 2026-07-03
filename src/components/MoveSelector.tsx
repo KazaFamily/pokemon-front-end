@@ -11,7 +11,7 @@ export function MoveSelector({ moves, disabled, onSelect }: MoveSelectorProps) {
     <div className="move-selector">
       {moves.map((move) => (
         <button
-          key={move.id}
+          key={move.name}
           type="button"
           className={`move-selector__move type-badge--${move.type}`}
           disabled={disabled}
@@ -19,7 +19,7 @@ export function MoveSelector({ moves, disabled, onSelect }: MoveSelectorProps) {
         >
           <span className="move-selector__name">{move.name}</span>
           <span className="move-selector__meta">
-            {move.power != null ? `PWR ${move.power}` : "STATUS"} · PP {move.pp}
+            {move.power > 0 ? `PWR ${move.power}` : "STATUS"} · PP {move.pp}
           </span>
         </button>
       ))}

@@ -1,212 +1,293 @@
-import type { Api } from "./client";
-import type { Battle, PokemonSpecies, Trainer } from "../types";
+import type { Api, LoginResult } from "./client";
+import type { ActivePokemon, Battle, BattleCard, Move, Stats, Trainer } from "../types";
 
 // MOCK API - stands in for pokemon-battle-apis until VITE_API_BASE_URL is set.
-// Sprite URLs below are stub data shaped like what the real backend will return
+// Sprite URLs below are stub data shaped like what the real backend returns
 // (it caches/serves PokeAPI sprite URLs); the frontend never fetches PokeAPI directly.
-const MOCK_POKEMON: PokemonSpecies[] = [
+
+interface MockSpecies {
+  pokemonId: number;
+  name: string;
+  spriteUrl: string;
+  types: BattleCard["types"];
+  baseStats: Stats;
+  moves: Move[];
+}
+
+const MOCK_SPECIES: MockSpecies[] = [
   {
-    id: "1",
-    name: "Bulbasaur",
+    pokemonId: 1,
+    name: "bulbasaur",
     spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
     types: ["grass", "poison"],
-    baseStats: { hp: 45, attack: 49, defense: 49, speed: 45 },
+    baseStats: { hp: 45, attack: 49, defense: 49, specialAttack: 65, specialDefense: 65, speed: 45 },
     moves: [
-      { id: "tackle", name: "Tackle", type: "normal", power: 40, accuracy: 100, pp: 35 },
-      { id: "vine-whip", name: "Vine Whip", type: "grass", power: 45, accuracy: 100, pp: 25 },
-      { id: "growl", name: "Growl", type: "normal", power: null, accuracy: 100, pp: 40 },
-      { id: "poison-powder", name: "Poison Powder", type: "poison", power: null, accuracy: 75, pp: 35 },
+      { name: "tackle", type: "normal", power: 40, accuracy: 100, pp: 35, damageClass: "physical" },
+      { name: "vine-whip", type: "grass", power: 45, accuracy: 100, pp: 25, damageClass: "physical" },
+      { name: "growl", type: "normal", power: 0, accuracy: 100, pp: 40, damageClass: "status" },
+      { name: "poison-powder", type: "poison", power: 0, accuracy: 75, pp: 35, damageClass: "status" },
     ],
   },
   {
-    id: "4",
-    name: "Charmander",
+    pokemonId: 4,
+    name: "charmander",
     spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png",
     types: ["fire"],
-    baseStats: { hp: 39, attack: 52, defense: 43, speed: 65 },
+    baseStats: { hp: 39, attack: 52, defense: 43, specialAttack: 60, specialDefense: 50, speed: 65 },
     moves: [
-      { id: "scratch", name: "Scratch", type: "normal", power: 40, accuracy: 100, pp: 35 },
-      { id: "ember", name: "Ember", type: "fire", power: 40, accuracy: 100, pp: 25 },
-      { id: "growl", name: "Growl", type: "normal", power: null, accuracy: 100, pp: 40 },
-      { id: "smokescreen", name: "Smokescreen", type: "normal", power: null, accuracy: 100, pp: 20 },
+      { name: "scratch", type: "normal", power: 40, accuracy: 100, pp: 35, damageClass: "physical" },
+      { name: "ember", type: "fire", power: 40, accuracy: 100, pp: 25, damageClass: "special" },
+      { name: "growl", type: "normal", power: 0, accuracy: 100, pp: 40, damageClass: "status" },
+      { name: "smokescreen", type: "normal", power: 0, accuracy: 100, pp: 20, damageClass: "status" },
     ],
   },
   {
-    id: "7",
-    name: "Squirtle",
+    pokemonId: 7,
+    name: "squirtle",
     spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png",
     types: ["water"],
-    baseStats: { hp: 44, attack: 48, defense: 65, speed: 43 },
+    baseStats: { hp: 44, attack: 48, defense: 65, specialAttack: 50, specialDefense: 64, speed: 43 },
     moves: [
-      { id: "tackle", name: "Tackle", type: "normal", power: 40, accuracy: 100, pp: 35 },
-      { id: "water-gun", name: "Water Gun", type: "water", power: 40, accuracy: 100, pp: 25 },
-      { id: "withdraw", name: "Withdraw", type: "water", power: null, accuracy: 100, pp: 40 },
-      { id: "bubble", name: "Bubble", type: "water", power: 40, accuracy: 100, pp: 30 },
+      { name: "tackle", type: "normal", power: 40, accuracy: 100, pp: 35, damageClass: "physical" },
+      { name: "water-gun", type: "water", power: 40, accuracy: 100, pp: 25, damageClass: "special" },
+      { name: "withdraw", type: "water", power: 0, accuracy: 100, pp: 40, damageClass: "status" },
+      { name: "bubble", type: "water", power: 40, accuracy: 100, pp: 30, damageClass: "special" },
     ],
   },
   {
-    id: "25",
-    name: "Pikachu",
+    pokemonId: 25,
+    name: "pikachu",
     spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png",
     types: ["electric"],
-    baseStats: { hp: 35, attack: 55, defense: 40, speed: 90 },
+    baseStats: { hp: 35, attack: 55, defense: 40, specialAttack: 50, specialDefense: 50, speed: 90 },
     moves: [
-      { id: "quick-attack", name: "Quick Attack", type: "normal", power: 40, accuracy: 100, pp: 30 },
-      { id: "thunder-shock", name: "Thunder Shock", type: "electric", power: 40, accuracy: 100, pp: 30 },
-      { id: "growl", name: "Growl", type: "normal", power: null, accuracy: 100, pp: 40 },
-      { id: "tail-whip", name: "Tail Whip", type: "normal", power: null, accuracy: 100, pp: 30 },
+      { name: "quick-attack", type: "normal", power: 40, accuracy: 100, pp: 30, damageClass: "physical" },
+      { name: "thunder-shock", type: "electric", power: 40, accuracy: 100, pp: 30, damageClass: "special" },
+      { name: "growl", type: "normal", power: 0, accuracy: 100, pp: 40, damageClass: "status" },
+      { name: "tail-whip", type: "normal", power: 0, accuracy: 100, pp: 30, damageClass: "status" },
     ],
   },
 ];
 
-const trainers = new Map<string, Trainer>();
+interface MockTrainer {
+  trainerId: string;
+  name: string;
+  type: "human" | "ai";
+  roster: { pokemonId: number; level: number; moves: string[] }[];
+  battleCards: { pokemonId: number; level: number; moves: string[] }[];
+}
+
+const trainersById = new Map<string, MockTrainer>();
+const trainersByName = new Map<string, MockTrainer>();
 const battles = new Map<string, Battle>();
 
 let trainerSeq = 1;
 let battleSeq = 1;
-let logSeq = 1;
 
 function delay<T>(value: T, ms = 350): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
-// Trainer/Battle objects are mutated in place as the in-memory store of record, so
-// every call returns a fresh clone - otherwise repeated polls of the same mutated
-// object would hand back a referentially-identical value and React would bail out
-// of re-rendering even though the underlying state changed.
 function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
-function pickPokemon(): PokemonSpecies {
-  return MOCK_POKEMON[Math.floor(Math.random() * MOCK_POKEMON.length)];
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function otherSide(battle: Battle, trainerId: string) {
-  return battle.sides[0].trainerId === trainerId ? battle.sides[1] : battle.sides[0];
+function sampleDistinct<T>(items: T[], count: number): T[] {
+  const pool = [...items];
+  const picked: T[] = [];
+  while (picked.length < count && pool.length > 0) {
+    picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  }
+  return picked;
 }
 
-function thisSide(battle: Battle, trainerId: string) {
-  return battle.sides[0].trainerId === trainerId ? battle.sides[0] : battle.sides[1];
+function drawBattleCards(count = 20): MockTrainer["battleCards"] {
+  const picked = sampleDistinct(MOCK_SPECIES, Math.min(count, MOCK_SPECIES.length));
+  return picked.map((species) => {
+    const moveCount = Math.min(species.moves.length, randomInt(1, 4));
+    return {
+      pokemonId: species.pokemonId,
+      level: randomInt(5, 50),
+      moves: sampleDistinct(species.moves, moveCount).map((m) => m.name),
+    };
+  });
 }
 
-function resolveTurnIfReady(battle: Battle, pendingMoves: Map<string, string>) {
-  const [a, b] = battle.sides;
-  if (!a.hasSubmittedMove || !b.hasSubmittedMove) return;
+function enrich(slots: MockTrainer["battleCards"]): BattleCard[] {
+  return slots.flatMap((slot) => {
+    const species = MOCK_SPECIES.find((s) => s.pokemonId === slot.pokemonId);
+    if (!species) return [];
+    return [{ ...slot, name: species.name, spriteUrl: species.spriteUrl, types: species.types, baseStats: species.baseStats }];
+  });
+}
 
-  const order = a.active.pokemon.baseStats.speed >= b.active.pokemon.baseStats.speed ? [a, b] : [b, a];
+function toTrainerView(trainer: MockTrainer): Trainer {
+  return {
+    trainerId: trainer.trainerId,
+    name: trainer.name,
+    type: trainer.type,
+    roster: enrich(trainer.roster),
+    battleCards: enrich(trainer.battleCards),
+  };
+}
 
-  for (const attacker of order) {
-    const defender = attacker === a ? b : a;
-    if (defender.active.currentHp <= 0) continue;
+function statAtLevel(base: number, level: number): number {
+  return Math.floor((base * level) / 50) + 5;
+}
 
-    const moveId = pendingMoves.get(attacker.trainerId);
-    const move = attacker.active.pokemon.moves.find((m) => m.id === moveId);
+function hpAtLevel(base: number, level: number): number {
+  return Math.floor((base * level) / 50) + level + 10;
+}
+
+function buildActivePokemon(slot: MockTrainer["roster"][number]): ActivePokemon {
+  const species = MOCK_SPECIES.find((s) => s.pokemonId === slot.pokemonId) ?? MOCK_SPECIES[0];
+  const knownMoves = species.moves.filter((m) => slot.moves.includes(m.name));
+  const moves = knownMoves.length > 0 ? knownMoves : species.moves.slice(0, 4);
+  const maxHp = hpAtLevel(species.baseStats.hp, slot.level);
+  return {
+    pokemonId: species.pokemonId,
+    name: species.name,
+    types: species.types,
+    level: slot.level,
+    stats: {
+      hp: maxHp,
+      attack: statAtLevel(species.baseStats.attack, slot.level),
+      defense: statAtLevel(species.baseStats.defense, slot.level),
+      specialAttack: statAtLevel(species.baseStats.specialAttack, slot.level),
+      specialDefense: statAtLevel(species.baseStats.specialDefense, slot.level),
+      speed: statAtLevel(species.baseStats.speed, slot.level),
+    },
+    currentHp: maxHp,
+    maxHp,
+    status: null,
+    moves,
+  };
+}
+
+function otherSideKey(side: "side1" | "side2"): "side1" | "side2" {
+  return side === "side1" ? "side2" : "side1";
+}
+
+function sideForTrainer(battle: Battle, trainerId: string): "side1" | "side2" {
+  return battle.trainer1Id === trainerId ? "side1" : "side2";
+}
+
+function resolveTurnIfReady(battle: Battle) {
+  const move1 = battle.pendingMoves.side1;
+  const move2 = battle.pendingMoves.side2;
+  if (!move1 || !move2) return;
+
+  const order: Array<["side1" | "side2", string]> =
+    battle.active1.stats.speed >= battle.active2.stats.speed
+      ? [["side1", move1], ["side2", move2]]
+      : [["side2", move2], ["side1", move1]];
+
+  for (const [side, moveName] of order) {
+    const attacker = side === "side1" ? battle.active1 : battle.active2;
+    const defender = side === "side1" ? battle.active2 : battle.active1;
+    if (defender.currentHp <= 0) continue;
+
+    const move = attacker.moves.find((m) => m.name === moveName);
     if (!move) continue;
 
-    if (move.power == null) {
-      battle.log.push({
-        id: String(logSeq++),
-        turn: battle.turn,
-        message: `${attacker.active.pokemon.name} used ${move.name}!`,
-      });
+    if (move.power === 0) {
+      battle.log.push(`${attacker.name} used ${move.name}!`);
       continue;
     }
 
     const damage = Math.max(1, Math.round(move.power * (0.7 + Math.random() * 0.5) * 0.25));
-    defender.active.currentHp = Math.max(0, defender.active.currentHp - damage);
-    battle.log.push({
-      id: String(logSeq++),
-      turn: battle.turn,
-      message: `${attacker.active.pokemon.name} used ${move.name}! It dealt ${damage} damage to ${defender.active.pokemon.name}.`,
-    });
+    defender.currentHp = Math.max(0, defender.currentHp - damage);
+    battle.log.push(`${attacker.name} used ${move.name}! It dealt ${damage} damage to ${defender.name}.`);
   }
 
-  a.hasSubmittedMove = false;
-  b.hasSubmittedMove = false;
+  battle.pendingMoves = {};
   battle.turn += 1;
-  battle.waitingOn = [a.trainerId, b.trainerId];
-  pendingMoves.clear();
+  battle.updatedAt = new Date().toISOString();
 
-  if (a.active.currentHp <= 0 || b.active.currentHp <= 0) {
-    battle.status = "finished";
-    battle.winnerTrainerId = a.active.currentHp <= 0 ? b.trainerId : a.trainerId;
-    battle.log.push({
-      id: String(logSeq++),
-      turn: battle.turn,
-      message: `${battle.winnerTrainerId === a.trainerId ? a.trainerName : b.trainerName} wins the battle!`,
-    });
-    battle.waitingOn = [];
+  if (battle.active1.currentHp <= 0 || battle.active2.currentHp <= 0) {
+    battle.status = "complete";
+    battle.winner = battle.active1.currentHp <= 0 ? battle.trainer2Id : battle.trainer1Id;
+    battle.log.push(`${battle.winner === battle.trainer1Id ? "Trainer 1" : "Trainer 2"} wins the battle!`);
   }
 }
 
-const pendingMovesByBattle = new Map<string, Map<string, string>>();
-
 export const mockApi: Api = {
-  listPokemon: () => delay([...MOCK_POKEMON]),
-
-  createTrainer: (name: string) => {
-    const id = String(trainerSeq++);
-    const trainer: Trainer = { id, name, roster: [] };
-    trainers.set(id, trainer);
-    return delay(clone(trainer));
+  login: (name: string): Promise<LoginResult> => {
+    let trainer = trainersByName.get(name);
+    if (!trainer) {
+      trainer = {
+        trainerId: String(trainerSeq++),
+        name,
+        type: "human",
+        roster: [],
+        battleCards: drawBattleCards(),
+      };
+      trainersById.set(trainer.trainerId, trainer);
+      trainersByName.set(name, trainer);
+    }
+    return delay({
+      trainer: toTrainerView(trainer),
+      tokens: { accessToken: "mock-access-token", idToken: "mock-id-token", expiresIn: 3600 },
+    });
   },
 
   getTrainer: (trainerId: string) => {
-    const trainer = trainers.get(trainerId);
+    const trainer = trainersById.get(trainerId);
     if (!trainer) return Promise.reject(new Error(`Trainer ${trainerId} not found`));
-    return delay(clone(trainer));
+    return delay(clone(toTrainerView(trainer)));
   },
 
-  setTrainerRoster: (trainerId: string, pokemonIds: string[]) => {
-    const trainer = trainers.get(trainerId);
+  setRoster: (trainerId: string, pokemonIds: number[]) => {
+    const trainer = trainersById.get(trainerId);
     if (!trainer) return Promise.reject(new Error(`Trainer ${trainerId} not found`));
-    trainer.roster = pokemonIds
-      .map((id) => MOCK_POKEMON.find((p) => p.id === id))
-      .filter((p): p is PokemonSpecies => Boolean(p));
-    return delay(clone(trainer));
+    const roster = pokemonIds.map((id) => {
+      const card = trainer.battleCards.find((c) => c.pokemonId === id);
+      if (!card) throw new Error(`Pokemon ${id} is not one of your battle cards`);
+      return card;
+    });
+    trainer.roster = roster;
+    return delay({ trainerId, roster: enrich(roster) });
   },
 
-  createBattle: (trainerId: string, opponentTrainerId: string) => {
-    const trainer = trainers.get(trainerId);
-    const opponent = trainers.get(opponentTrainerId);
+  rerollBattleCards: (trainerId: string) => {
+    const trainer = trainersById.get(trainerId);
     if (!trainer) return Promise.reject(new Error(`Trainer ${trainerId} not found`));
-    if (!opponent) return Promise.reject(new Error(`Opponent trainer ${opponentTrainerId} not found`));
+    trainer.battleCards = drawBattleCards();
+    trainer.roster = [];
+    return delay({ trainerId, battleCards: enrich(trainer.battleCards), roster: [] });
+  },
 
-    const trainerMon = trainer.roster[0] ?? pickPokemon();
-    const opponentMon = opponent.roster[0] ?? pickPokemon();
+  createBattle: (trainer1Id: string, trainer2Id: string) => {
+    const t1 = trainersById.get(trainer1Id);
+    const t2 = trainersById.get(trainer2Id);
+    if (!t1) return Promise.reject(new Error(`Trainer ${trainer1Id} not found`));
+    if (!t2) return Promise.reject(new Error(`Trainer ${trainer2Id} not found`));
+    if (t1.roster.length === 0) return Promise.reject(new Error(`${t1.name} has not picked a battle roster yet`));
+    if (t2.roster.length === 0) return Promise.reject(new Error(`${t2.name} has not picked a battle roster yet`));
 
-    const id = String(battleSeq++);
+    const battleId = String(battleSeq++);
+    const active1 = buildActivePokemon(t1.roster[0]);
+    const active2 = buildActivePokemon(t2.roster[0]);
+    const now = new Date().toISOString();
     const battle: Battle = {
-      id,
-      status: "active",
+      battleId,
+      trainer1Id,
+      trainer2Id,
       turn: 1,
-      sides: [
-        {
-          trainerId: trainer.id,
-          trainerName: trainer.name,
-          active: { pokemon: trainerMon, currentHp: trainerMon.baseStats.hp, maxHp: trainerMon.baseStats.hp },
-          hasSubmittedMove: false,
-        },
-        {
-          trainerId: opponent.id,
-          trainerName: opponent.name,
-          active: { pokemon: opponentMon, currentHp: opponentMon.baseStats.hp, maxHp: opponentMon.baseStats.hp },
-          hasSubmittedMove: false,
-        },
-      ],
-      log: [
-        {
-          id: String(logSeq++),
-          turn: 1,
-          message: `Battle started! ${trainer.name} sent out ${trainerMon.name}. ${opponent.name} sent out ${opponentMon.name}.`,
-        },
-      ],
-      winnerTrainerId: null,
-      waitingOn: [trainer.id, opponent.id],
+      active1,
+      active2,
+      pendingMoves: {},
+      log: [`Battle started! ${t1.name} sent out ${active1.name}. ${t2.name} sent out ${active2.name}.`],
+      status: "active",
+      winner: null,
+      createdAt: now,
+      updatedAt: now,
     };
-    battles.set(id, battle);
-    pendingMovesByBattle.set(id, new Map());
+    battles.set(battleId, battle);
     return delay(clone(battle));
   },
 
@@ -216,42 +297,29 @@ export const mockApi: Api = {
     return delay(clone(battle), 80);
   },
 
-  submitMove: (battleId: string, trainerId: string, moveId: string) => {
+  submitMove: (battleId: string, trainerId: string, moveName: string) => {
     const battle = battles.get(battleId);
     if (!battle) return Promise.reject(new Error(`Battle ${battleId} not found`));
-    if (battle.status !== "active") return delay(clone(battle));
+    if (battle.status !== "active") return delay(undefined);
 
-    const side = thisSide(battle, trainerId);
-    side.hasSubmittedMove = true;
-    battle.waitingOn = battle.waitingOn.filter((id) => id !== trainerId);
-
-    const pending = pendingMovesByBattle.get(battleId)!;
-    pending.set(trainerId, moveId);
-
-    resolveTurnIfReady(battle, pending);
+    const side = sideForTrainer(battle, trainerId);
+    battle.pendingMoves[side] = moveName;
+    resolveTurnIfReady(battle);
 
     // Simulate an opponent auto-move for single-player testing convenience
     // when the "opponent" trainer has no human submitting moves in this tab.
-    const opponent = otherSide(battle, trainerId);
-    if (battle.status === "active" && !opponent.hasSubmittedMove) {
+    const opponentSide = otherSideKey(side);
+    if (battle.status === "active" && !battle.pendingMoves[opponentSide]) {
       setTimeout(() => {
         const freshBattle = battles.get(battleId);
-        if (!freshBattle || freshBattle.status !== "active") return;
-        const freshOpponent = otherSide(freshBattle, trainerId);
-        if (freshOpponent.hasSubmittedMove) return;
-        const autoMove = freshOpponent.active.pokemon.moves[
-          Math.floor(Math.random() * freshOpponent.active.pokemon.moves.length)
-        ];
-        freshOpponent.hasSubmittedMove = true;
-        freshBattle.waitingOn = freshBattle.waitingOn.filter((id) => id !== freshOpponent.trainerId);
-        const freshPending = pendingMovesByBattle.get(battleId)!;
-        freshPending.set(freshOpponent.trainerId, autoMove.id);
-        resolveTurnIfReady(freshBattle, freshPending);
+        if (!freshBattle || freshBattle.status !== "active" || freshBattle.pendingMoves[opponentSide]) return;
+        const opponentActive = opponentSide === "side1" ? freshBattle.active1 : freshBattle.active2;
+        const autoMove = opponentActive.moves[Math.floor(Math.random() * opponentActive.moves.length)];
+        freshBattle.pendingMoves[opponentSide] = autoMove.name;
+        resolveTurnIfReady(freshBattle);
       }, 900);
     }
 
-    return delay(clone(battle));
+    return delay(undefined);
   },
-
-  healthCheck: () => delay({ ok: true }),
 };
