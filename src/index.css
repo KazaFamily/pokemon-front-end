@@ -282,6 +282,10 @@ a {
 .type-badge--dark { background: #705848; color: #fff; }
 .type-badge--steel { background: #b8b8d0; }
 .type-badge--fairy { background: #ee99ac; }
+.type-badge--colorless { background: #e8e8e8; }
+.type-badge--rule { background: var(--accent); color: #12141c; }
+
+.tcg-card__count { color: var(--accent); font-weight: 700; }
 
 /* HP bar */
 
@@ -437,6 +441,23 @@ a {
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 8px;
+}
+
+.tcg-hand {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.tcg-setup-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tcg-setup-slot__actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* Battle log */

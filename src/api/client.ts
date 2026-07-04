@@ -1,4 +1,4 @@
-import type { Battle, TcgActionType, TcgBattle, Trainer } from "../types";
+import type { Battle, TcgAction, TcgBattle, TcgCard, Trainer } from "../types";
 import type { TokenSet } from "../auth/tokenStore";
 import { getIdToken } from "../auth/tokenStore";
 
@@ -75,7 +75,7 @@ export const realApi = {
 
   // TCG mode - independent dataset/engine, same auth pattern as above.
   setTcgDeck: (trainerId: string, cardIds: number[]) =>
-    request<{ trainerId: string; tcgDeck: Trainer["tcgDeck"] }>(`/trainers/${trainerId}/tcg-deck`, {
+    request<{ trainerId: string; deckSize: number }>(`/trainers/${trainerId}/tcg-deck`, {
       method: "PUT",
       body: JSON.stringify({ cardIds }),
     }),
@@ -91,16 +91,21 @@ export const realApi = {
 
   getTcgBattle: (battleId: string) => request<TcgBattle>(`/tcg-battles/${battleId}`),
 
-  submitTcgAction: (
-    battleId: string,
-    trainerId: string,
-    action: TcgActionType,
-    options?: { benchCardId?: number; attackName?: string },
-  ) =>
-    request<unknown>(`/tcg-battles/${battleId}/actions`, {
+  listTcgCards: () => request<{ cards: TcgCard[] }>("/tcg-cards"),
+
+  submitTcgSetup: (battleId: string, trainerId: string, activeCardId: number, benchCardIds: number[]) =>
+    request<unknown>(`/tcg-battles/${battleId}/setup`, {
       method: "POST",
-      body: JSON.stringify({ trainerId, action, ...options }),
+      body: JSON.stringify({ trainerId, activeCardId, benchCardIds }),
     }),
+
+  submitTcgAction: (battleId: string, trainerId: string, action: TcgAction) => {
+    const { type, ...fields } = action;
+    return request<{ message: string; log: string[]; winner: string | null; status: string; turnSide?: string; legalActions: TcgAction[] }>(
+      `/tcg-battles/${battleId}/actions`,
+      { method: "POST", body: JSON.stringify({ trainerId, action: type, ...fields }) },
+    );
+  },
 };
 
 export type Api = typeof realApi;
