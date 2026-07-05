@@ -1,4 +1,4 @@
-import type { Battle, TcgAction, TcgBattle, TcgCard, Trainer } from "../types";
+import type { Battle, TcgAction, TcgBattle, TcgCard, TcgStarterDeck, Trainer } from "../types";
 import type { TokenSet } from "../auth/tokenStore";
 import { getIdToken } from "../auth/tokenStore";
 
@@ -92,6 +92,8 @@ export const realApi = {
   getTcgBattle: (battleId: string) => request<TcgBattle>(`/tcg-battles/${battleId}`),
 
   listTcgCards: () => request<{ cards: TcgCard[] }>("/tcg-cards"),
+
+  listTcgStarterDecks: () => request<{ starterDecks: TcgStarterDeck[] }>("/tcg-starter-decks"),
 
   submitTcgSetup: (battleId: string, trainerId: string, activeCardId: number, benchCardIds: number[]) =>
     request<unknown>(`/tcg-battles/${battleId}/setup`, {

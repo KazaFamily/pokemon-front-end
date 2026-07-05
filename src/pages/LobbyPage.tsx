@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, isMockApi } from "../api";
 import type { Trainer } from "../types";
 import { useAuth } from "../auth/useAuth";
@@ -98,6 +98,8 @@ export function LobbyPage() {
     return <div className="page">Loading your trainer…</div>;
   }
 
+  const hasLoadout = trainer.roster.length > 0;
+
   return (
     <div className="page">
       <h1>Lobby</h1>
@@ -133,11 +135,21 @@ export function LobbyPage() {
                 type="checkbox"
                 checked={lobby.self?.autoMatch ?? false}
                 onChange={(e) => lobby.setAutoMatch(e.target.checked)}
-                disabled={!lobby.isConnected || (lobby.self?.status !== "in-lobby" && lobby.self?.status !== "auto-matching")}
+                disabled={
+                  !hasLoadout ||
+                  !lobby.isConnected ||
+                  (lobby.self?.status !== "in-lobby" && lobby.self?.status !== "auto-matching")
+                }
               />
               Auto-match me with the next available trainer
             </label>
           </div>
+
+          {!hasLoadout && (
+            <p className="muted">
+              You need a battle team before you can be matched or challenged - <Link to="/battle/setup">pick one now</Link>.
+            </p>
+          )}
 
           {!lobby.isConnected && <p className="muted">Connecting to the lobby…</p>}
 
@@ -156,7 +168,7 @@ export function LobbyPage() {
                       <button
                         type="button"
                         onClick={() => lobby.challenge(m.trainerId)}
-                        disabled={lobby.self?.status !== "in-lobby" || m.status === "in-battle"}
+                        disabled={!hasLoadout || lobby.self?.status !== "in-lobby" || m.status === "in-battle"}
                       >
                         Challenge
                       </button>

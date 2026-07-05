@@ -106,6 +106,16 @@ export interface TcgTrainerCard extends TcgCardBase {
  * category-specific fields. */
 export type TcgCard = TcgPokemonCard | TcgEnergyCard | TcgTrainerCard;
 
+/** A ready-to-play, legal 60-card deck template from GET /tcg-starter-decks -
+ * a starting point for the deck builder, not a fixed/uneditable loadout. */
+export interface TcgStarterDeck {
+  id: string;
+  name: string;
+  description: string;
+  energyType: PokemonTypeName;
+  cardIds: number[];
+}
+
 /** A Pokemon currently in play (active or benched) during a TCG match -
  * denormalized from TcgPokemonCard plus match state, so the frontend can
  * render it with no separate card lookup (same idea as ActivePokemon below).

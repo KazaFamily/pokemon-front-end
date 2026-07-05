@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api";
-import type { TcgCard } from "../types";
+import type { TcgCard, TcgStarterDeck } from "../types";
 import { TcgCardView } from "../components/TcgCardView";
 import { getMyTrainerId } from "../lib/myTrainer";
 import { getTcgCatalog } from "../lib/tcgCatalog";
@@ -18,6 +18,7 @@ export function TcgDeckSetupPage() {
 
   const [catalog, setCatalog] = useState<Map<number, TcgCard>>(new Map());
   const [counts, setCounts] = useState<Map<number, number>>(new Map());
+  const [starterDecks, setStarterDecks] = useState<TcgStarterDeck[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,9 +26,10 @@ export function TcgDeckSetupPage() {
 
   useEffect(() => {
     if (!trainerId) return;
-    Promise.all([getTcgCatalog(), api.getTrainer(trainerId)])
-      .then(([catalogMap, trainer]) => {
+    Promise.all([getTcgCatalog(), api.getTrainer(trainerId), api.listTcgStarterDecks()])
+      .then(([catalogMap, trainer, { starterDecks }]) => {
         setCatalog(catalogMap);
+        setStarterDecks(starterDecks);
         // Pre-populate from the trainer's current tcgDeck, if any, so editing an
         // existing legal deck doesn't mean starting from scratch.
         const initialCounts = new Map<number, number>();
@@ -37,6 +39,12 @@ export function TcgDeckSetupPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load the card catalog"))
       .finally(() => setIsLoading(false));
   }, [trainerId]);
+
+  function applyStarterDeck(deck: TcgStarterDeck) {
+    const nextCounts = new Map<number, number>();
+    for (const cardId of deck.cardIds) nextCounts.set(cardId, (nextCounts.get(cardId) ?? 0) + 1);
+    setCounts(nextCounts);
+  }
 
   const totalCards = useMemo(() => [...counts.values()].reduce((sum, n) => sum + n, 0), [counts]);
 
@@ -84,16 +92,20 @@ export function TcgDeckSetupPage() {
   }
 
   async function handleConfirm() {
-    if (!trainerId || !opponentId || totalCards !== DECK_SIZE) return;
+    if (!trainerId || totalCards !== DECK_SIZE) return;
     const cardIds = deckEntries.flatMap(([cardId, count]) => Array(count).fill(cardId));
     setIsSubmitting(true);
     setError(null);
     try {
       await api.setTcgDeck(trainerId, cardIds);
-      const battle = await api.createTcgBattle(trainerId, opponentId);
-      navigate(`/tcg/battle/${battle.battleId}`);
+      if (opponentId) {
+        const battle = await api.createTcgBattle(trainerId, opponentId);
+        navigate(`/tcg/battle/${battle.battleId}`);
+      } else {
+        navigate("/tcg");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start TCG battle");
+      setError(err instanceof Error ? err.message : "Failed to save your deck");
     } finally {
       setIsSubmitting(false);
     }
@@ -111,31 +123,48 @@ export function TcgDeckSetupPage() {
     );
   }
 
-  if (!opponentId) {
-    return (
-      <div className="page">
-        <h1>Build Your Deck</h1>
-        <p>No opponent selected.</p>
-        <button type="button" onClick={() => navigate("/tcg")}>
-          Go to TCG Lobby
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="page">
       <h1>Build Your Deck</h1>
       <p className="muted">
-        Build a real, legal {DECK_SIZE}-card deck from the full card catalog to battle trainer <code>{opponentId}</code> - up
-        to {MAX_COPIES} copies of any card (Basic Energy unlimited), at most {MAX_ACE_SPEC} ACE SPEC card, and at least one
-        Basic Pokémon.
+        {opponentId ? (
+          <>
+            Build a real, legal {DECK_SIZE}-card deck from the full card catalog to battle trainer <code>{opponentId}</code>
+            {" "}-{" "}
+          </>
+        ) : (
+          <>Build a real, legal {DECK_SIZE}-card deck from the full card catalog - </>
+        )}
+        up to {MAX_COPIES} copies of any card (Basic Energy unlimited), at most {MAX_ACE_SPEC} ACE SPEC card, and at least
+        one Basic Pokémon.
       </p>
 
       {isLoading ? (
         <p>Loading the card catalog…</p>
       ) : (
         <>
+          {starterDecks.length > 0 && (
+            <section className="panel">
+              <h2>Starter Decks</h2>
+              <p className="muted">
+                Load a ready-to-play, legal {DECK_SIZE}-card deck as a starting point, then add or remove cards below -
+                loading one replaces what's currently in Your Deck (not saved until you Confirm & Battle).
+              </p>
+              <ul>
+                {starterDecks.map((deck) => (
+                  <li key={deck.id} className="form-row">
+                    <span>
+                      <strong>{deck.name}</strong> - {deck.description}
+                    </span>
+                    <button type="button" onClick={() => applyStarterDeck(deck)}>
+                      Load
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="panel">
             <h2>
               Your Deck ({totalCards}/{DECK_SIZE})
@@ -175,7 +204,7 @@ export function TcgDeckSetupPage() {
       {error && <p className="error-text">{error}</p>}
 
       <button type="button" onClick={handleConfirm} disabled={isSubmitting || totalCards !== DECK_SIZE || legalityWarnings.length > 0}>
-        Confirm & Battle
+        {opponentId ? "Confirm & Battle" : "Save Deck"}
       </button>
     </div>
   );
