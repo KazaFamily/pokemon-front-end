@@ -11,6 +11,7 @@ import type {
   TcgInPlayCard,
   TcgPokemonCard,
   TcgSideState,
+  TcgStarterDeck,
   Trainer,
 } from "../types";
 
@@ -175,6 +176,47 @@ const MOCK_TCG_CATALOG: TcgCard[] = [
 ];
 
 const MOCK_TCG_CATALOG_BY_ID = new Map(MOCK_TCG_CATALOG.map((c) => [c.cardId, c]));
+
+// Hand-built legal 60-card decks (mirrors what pokemon-battle-apis's
+// buildStarterDeckTemplates would generate against the real ~1,267-card
+// catalog, just fixed since MOCK_TCG_CATALOG is a small static set) - so a
+// mock-mode trainer starts with a real deck instead of an empty one, and the
+// deck builder has something to offer besides "start from scratch".
+const MOCK_STARTER_DECKS: TcgStarterDeck[] = [
+  {
+    id: "starter-fire",
+    name: "Fire Starter",
+    description: "A fire-type deck built around Charmander -> Charmeleon, powered by Basic Fire Energy.",
+    energyType: "fire",
+    cardIds: [
+      ...Array(4).fill(4), // Charmander
+      ...Array(3).fill(5), // Charmeleon
+      ...Array(4).fill(201), // Poke Ball
+      ...Array(4).fill(202), // Professor's Research
+      203, // Path to the Peak
+      ...Array(4).fill(105), // Double Colorless Energy
+      ...Array(40).fill(101), // Basic Fire Energy
+    ],
+  },
+  {
+    id: "starter-balanced",
+    name: "Balanced Starter",
+    description: "A mixed-type deck of Bulbasaur, Squirtle, and Pikachu backed by their matching Basic Energy.",
+    energyType: "normal",
+    cardIds: [
+      ...Array(4).fill(1), // Bulbasaur
+      ...Array(4).fill(7), // Squirtle
+      ...Array(4).fill(25), // Pikachu
+      ...Array(4).fill(201), // Poke Ball
+      ...Array(4).fill(202), // Professor's Research
+      203, // Path to the Peak
+      ...Array(4).fill(105), // Double Colorless Energy
+      ...Array(12).fill(103), // Basic Grass Energy
+      ...Array(12).fill(102), // Basic Water Energy
+      ...Array(11).fill(104), // Basic Electric Energy
+    ],
+  },
+];
 
 interface MockTrainer {
   trainerId: string;
@@ -758,7 +800,9 @@ export const mockApi: Api = {
         roster: [],
         battleCards: drawBattleCards(),
         tcgCards: drawTcgCards(),
-        tcgDeck: [],
+        // A ready-to-play starter deck instead of an empty one - see
+        // MOCK_STARTER_DECKS and the real backend's tcgStarterDecks.ts.
+        tcgDeck: MOCK_STARTER_DECKS[Math.floor(Math.random() * MOCK_STARTER_DECKS.length)].cardIds.map((cardId) => ({ cardId })),
       };
       trainersById.set(trainer.trainerId, trainer);
       trainersByName.set(name, trainer);
@@ -891,6 +935,8 @@ export const mockApi: Api = {
   },
 
   listTcgCards: () => delay({ cards: MOCK_TCG_CATALOG }, 80),
+
+  listTcgStarterDecks: () => delay({ starterDecks: MOCK_STARTER_DECKS }, 80),
 
   createTcgBattle: (trainer1Id: string, trainer2Id: string) => {
     const t1 = trainersById.get(trainer1Id);

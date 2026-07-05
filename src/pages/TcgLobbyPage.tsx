@@ -7,6 +7,8 @@ import { TcgCardView } from "../components/TcgCardView";
 import { getMyTrainerId } from "../lib/myTrainer";
 import { useLobbySocket } from "../hooks/useLobbySocket";
 
+const TCG_DECK_SIZE = 60;
+
 export function TcgLobbyPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -66,6 +68,8 @@ export function TcgLobbyPage() {
     return <div className="page">Loading your trainer…</div>;
   }
 
+  const hasLoadout = trainer.tcgDeck.length === TCG_DECK_SIZE;
+
   return (
     <div className="page">
       <h1>TCG Lobby</h1>
@@ -101,11 +105,21 @@ export function TcgLobbyPage() {
                 type="checkbox"
                 checked={lobby.self?.autoMatch ?? false}
                 onChange={(e) => lobby.setAutoMatch(e.target.checked)}
-                disabled={!lobby.isConnected || (lobby.self?.status !== "in-lobby" && lobby.self?.status !== "auto-matching")}
+                disabled={
+                  !hasLoadout ||
+                  !lobby.isConnected ||
+                  (lobby.self?.status !== "in-lobby" && lobby.self?.status !== "auto-matching")
+                }
               />
               Auto-match me with the next available trainer
             </label>
           </div>
+
+          {!hasLoadout && (
+            <p className="muted">
+              You need a legal {TCG_DECK_SIZE}-card deck before you can be matched or challenged - <Link to="/tcg/setup">build one now</Link>.
+            </p>
+          )}
 
           {!lobby.isConnected && <p className="muted">Connecting to the lobby…</p>}
 
@@ -124,7 +138,7 @@ export function TcgLobbyPage() {
                       <button
                         type="button"
                         onClick={() => lobby.challenge(m.trainerId)}
-                        disabled={lobby.self?.status !== "in-lobby" || m.status === "in-battle"}
+                        disabled={!hasLoadout || lobby.self?.status !== "in-lobby" || m.status === "in-battle"}
                       >
                         Challenge
                       </button>

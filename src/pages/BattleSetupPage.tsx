@@ -37,15 +37,19 @@ export function BattleSetupPage() {
   }
 
   async function handleConfirm() {
-    if (!trainerId || !opponentId || selectedIds.length === 0) return;
+    if (!trainerId || selectedIds.length === 0) return;
     setIsSubmitting(true);
     setError(null);
     try {
       await api.setRoster(trainerId, selectedIds);
-      const battle = await api.createBattle(trainerId, opponentId);
-      navigate(`/battle/${battle.battleId}`);
+      if (opponentId) {
+        const battle = await api.createBattle(trainerId, opponentId);
+        navigate(`/battle/${battle.battleId}`);
+      } else {
+        navigate("/");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start battle");
+      setError(err instanceof Error ? err.message : "Failed to save your team");
     } finally {
       setIsSubmitting(false);
     }
@@ -63,24 +67,21 @@ export function BattleSetupPage() {
     );
   }
 
-  if (!opponentId) {
-    return (
-      <div className="page">
-        <h1>Choose Your Team</h1>
-        <p>No opponent selected.</p>
-        <button type="button" onClick={() => navigate("/")}>
-          Go to Lobby
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="page">
       <h1>Choose Your Team</h1>
       <p className="muted">
-        Pick up to {MAX_ROSTER_SIZE} battle cards to bring against trainer <code>{opponentId}</code> (
-        {selectedIds.length}/{MAX_ROSTER_SIZE} selected).
+        {opponentId ? (
+          <>
+            Pick up to {MAX_ROSTER_SIZE} battle cards to bring against trainer <code>{opponentId}</code> (
+            {selectedIds.length}/{MAX_ROSTER_SIZE} selected).
+          </>
+        ) : (
+          <>
+            Pick up to {MAX_ROSTER_SIZE} battle cards as your active team ({selectedIds.length}/{MAX_ROSTER_SIZE}{" "}
+            selected) - you'll need this set before the lobby can match or challenge you.
+          </>
+        )}
       </p>
 
       {isLoading ? (
@@ -101,7 +102,7 @@ export function BattleSetupPage() {
       {error && <p className="error-text">{error}</p>}
 
       <button type="button" onClick={handleConfirm} disabled={isSubmitting || selectedIds.length === 0}>
-        Confirm & Battle
+        {opponentId ? "Confirm & Battle" : "Save Team"}
       </button>
     </div>
   );
