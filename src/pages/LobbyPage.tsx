@@ -109,20 +109,6 @@ export function LobbyPage() {
         </p>
       </section>
 
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Your Battle Cards</h2>
-          <button type="button" onClick={handleReroll} disabled={isBusy}>
-            Get New Cards
-          </button>
-        </div>
-        <div className="pokemon-grid">
-          {trainer.battleCards.map((card, i) => (
-            <PokemonCard key={`${card.pokemonId}-${i}`} card={card} />
-          ))}
-        </div>
-      </section>
-
       {isMockApi ? (
         <section className="panel">
           <h2>Start a Battle</h2>
@@ -198,6 +184,20 @@ export function LobbyPage() {
           )}
         </section>
       )}
+
+      <section className="panel">
+        <div className="panel__header">
+          <h2>Your Battle Cards</h2>
+          <button type="button" onClick={handleReroll} disabled={isBusy}>
+            Get New Cards
+          </button>
+        </div>
+        <div className="pokemon-grid">
+          {trainer.battleCards.map((card, i) => (
+            <PokemonCard key={`${card.pokemonId}-${i}`} card={card} />
+          ))}
+        </div>
+      </section>
 
       {(error || lobby.error) && <p className="error-text">{error ?? lobby.error}</p>}
     </div>

@@ -77,20 +77,6 @@ export function TcgLobbyPage() {
         </p>
       </section>
 
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Your TCG Cards</h2>
-          <button type="button" onClick={handleReroll} disabled={isBusy}>
-            Redraw
-          </button>
-        </div>
-        <div className="pokemon-grid">
-          {trainer.tcgCards.map((card, i) => (
-            <TcgCardView key={`${card.cardId}-${i}`} card={card} />
-          ))}
-        </div>
-      </section>
-
       {isMockApi ? (
         <section className="panel">
           <h2>Start a TCG Battle</h2>
@@ -166,6 +152,20 @@ export function TcgLobbyPage() {
           )}
         </section>
       )}
+
+      <section className="panel">
+        <div className="panel__header">
+          <h2>Your TCG Cards</h2>
+          <button type="button" onClick={handleReroll} disabled={isBusy}>
+            Redraw
+          </button>
+        </div>
+        <div className="pokemon-grid">
+          {trainer.tcgCards.map((card, i) => (
+            <TcgCardView key={`${card.cardId}-${i}`} card={card} />
+          ))}
+        </div>
+      </section>
 
       {(error || lobby.error) && <p className="error-text">{error ?? lobby.error}</p>}
     </div>
