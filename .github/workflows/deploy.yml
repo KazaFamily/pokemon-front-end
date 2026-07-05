@@ -36,6 +36,11 @@ jobs:
           VITE_API_BASE_URL: ${{ secrets.API_BASE_URL }}
           VITE_LOBBY_WS_URL: ${{ secrets.LOBBY_WS_URL }}
 
+      # GitHub Pages is a static host with no server-side routing - it 404s on
+      # a direct load/refresh of a client-routed path like /tcg. Serving the
+      # SPA shell as the 404 response lets react-router pick up from the URL.
+      - run: cp dist/index.html dist/404.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
