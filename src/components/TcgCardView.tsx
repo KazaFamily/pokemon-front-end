@@ -8,7 +8,7 @@ interface TcgCardViewProps {
   countInDeck?: number;
 }
 
-function CostBadge({ symbol }: { symbol: TcgAttackCostSymbol }) {
+export function CostBadge({ symbol }: { symbol: TcgAttackCostSymbol }) {
   return <span className={`type-badge type-badge--${symbol}`}>{symbol === "colorless" ? "C" : symbol[0].toUpperCase()}</span>;
 }
 
