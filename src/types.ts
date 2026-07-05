@@ -205,6 +205,36 @@ export interface ActivePokemon {
 export type BattleSideKey = "side1" | "side2";
 export type BattleStatus = "active" | "complete";
 
+// --- Lobby / matchmaking (see pokemon-battle-apis's services/api/src/lib/lobbyTypes.ts) ---
+
+export type LobbyMode = "video" | "tcg";
+export type LobbyStatus = "in-lobby" | "auto-matching" | "challenging" | "challenged" | "in-battle";
+
+export interface LobbyMemberView {
+  trainerId: string;
+  name: string;
+  status: LobbyStatus;
+  autoMatch: boolean;
+}
+
+export type LobbyClientMessage =
+  | { action: "ENTER_LOBBY"; mode: LobbyMode }
+  | { action: "LEAVE_LOBBY" }
+  | { action: "SET_AUTO_MATCH"; autoMatch: boolean }
+  | { action: "CHALLENGE"; targetTrainerId: string }
+  | { action: "ACCEPT_CHALLENGE"; challengeId: string }
+  | { action: "DECLINE_CHALLENGE"; challengeId: string }
+  | { action: "CANCEL_CHALLENGE"; challengeId: string };
+
+export type LobbyServerMessage =
+  | { type: "LOBBY_STATE"; mode: LobbyMode; self: { status: LobbyStatus; autoMatch: boolean }; members: LobbyMemberView[] }
+  | { type: "CHALLENGED"; challengeId: string; from: { trainerId: string; name: string }; expiresAt: number }
+  | { type: "CHALLENGE_CANCELED"; challengeId: string; reason: "declined" | "canceled" | "timeout" }
+  | { type: "MATCHED"; mode: LobbyMode; battleId: string; opponent: { trainerId: string; name: string } }
+  | { type: "NEEDS_SETUP"; mode: LobbyMode; opponentTrainerId: string; opponentName: string }
+  | { type: "AUTO_MATCH_TIMED_OUT" }
+  | { type: "ERROR"; message: string };
+
 export interface Battle {
   battleId: string;
   trainer1Id: string;

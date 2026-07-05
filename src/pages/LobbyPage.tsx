@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { api } from "../api";
+import { api, isMockApi } from "../api";
 import type { Trainer } from "../types";
 import { useAuth } from "../auth/useAuth";
 import { PokemonCard } from "../components/PokemonCard";
 import { getMyTrainerId } from "../lib/myTrainer";
+import { useLobbySocket } from "../hooks/useLobbySocket";
 
 export function LobbyPage() {
   const navigate = useNavigate();
@@ -15,12 +16,22 @@ export function LobbyPage() {
   const [error, setError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
+  const lobby = useLobbySocket("video");
+
   useEffect(() => {
     if (!isAuthenticated) return;
     const trainerId = getMyTrainerId();
     if (!trainerId) return;
     api.getTrainer(trainerId).then(setTrainer).catch(() => setTrainer(null));
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (lobby.matched) navigate(`/battle/${lobby.matched.battleId}`);
+  }, [lobby.matched, navigate]);
+
+  useEffect(() => {
+    if (lobby.needsSetup) navigate(`/battle/setup?opponent=${encodeURIComponent(lobby.needsSetup.opponentTrainerId)}`);
+  }, [lobby.needsSetup, navigate]);
 
   async function handleLogin() {
     if (!name.trim()) return;
@@ -96,7 +107,6 @@ export function LobbyPage() {
         <p>
           Your trainer ID: <code>{trainer.trainerId}</code>
         </p>
-        <p className="muted">Share this ID with an opponent so they can battle you.</p>
       </section>
 
       <section className="panel">
@@ -113,21 +123,83 @@ export function LobbyPage() {
         </div>
       </section>
 
-      <section className="panel">
-        <h2>Start a Battle</h2>
-        <div className="form-row">
-          <input
-            placeholder="Opponent trainer ID"
-            value={opponentId}
-            onChange={(e) => setOpponentId(e.target.value)}
-          />
-          <button type="button" onClick={handleStartBattle} disabled={!opponentId.trim()}>
-            Battle
-          </button>
-        </div>
-      </section>
+      {isMockApi ? (
+        <section className="panel">
+          <h2>Start a Battle</h2>
+          <p className="muted">The live lobby needs a real backend - paste an opponent's trainer ID to battle directly.</p>
+          <div className="form-row">
+            <input
+              placeholder="Opponent trainer ID"
+              value={opponentId}
+              onChange={(e) => setOpponentId(e.target.value)}
+            />
+            <button type="button" onClick={handleStartBattle} disabled={!opponentId.trim()}>
+              Battle
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="panel">
+          <div className="panel__header">
+            <h2>Lobby</h2>
+            <label className="form-row" style={{ gap: "0.5rem" }}>
+              <input
+                type="checkbox"
+                checked={lobby.self?.autoMatch ?? false}
+                onChange={(e) => lobby.setAutoMatch(e.target.checked)}
+                disabled={!lobby.isConnected || (lobby.self?.status !== "in-lobby" && lobby.self?.status !== "auto-matching")}
+              />
+              Auto-match me with the next available trainer
+            </label>
+          </div>
 
-      {error && <p className="error-text">{error}</p>}
+          {!lobby.isConnected && <p className="muted">Connecting to the lobby…</p>}
+
+          {lobby.isConnected && (
+            <>
+              {lobby.members.length === 0 ? (
+                <p className="muted">No other trainers in the lobby right now.</p>
+              ) : (
+                <ul>
+                  {lobby.members.map((m) => (
+                    <li key={m.trainerId} className="form-row">
+                      <span>
+                        {m.name} - {m.status}
+                        {m.autoMatch ? " (auto-match)" : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => lobby.challenge(m.trainerId)}
+                        disabled={lobby.self?.status !== "in-lobby" || m.status === "in-battle"}
+                      >
+                        Challenge
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+
+          {lobby.incomingChallenge && (
+            <div className="panel" style={{ border: "2px solid orange" }}>
+              <p>
+                <strong>{lobby.incomingChallenge.from.name}</strong> has challenged you to a battle!
+              </p>
+              <div className="form-row">
+                <button type="button" onClick={() => lobby.acceptChallenge(lobby.incomingChallenge!.challengeId)}>
+                  Accept
+                </button>
+                <button type="button" onClick={() => lobby.declineChallenge(lobby.incomingChallenge!.challengeId)}>
+                  Decline
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {(error || lobby.error) && <p className="error-text">{error ?? lobby.error}</p>}
     </div>
   );
 }
