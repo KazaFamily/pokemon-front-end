@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { NavBar } from "./components/NavBar";
-import { LobbyPage } from "./pages/LobbyPage";
+import { HomePage } from "./pages/HomePage";
+import { BattleLobbyPage } from "./pages/BattleLobbyPage";
 import { BattleSetupPage } from "./pages/BattleSetupPage";
 import { BattlePage } from "./pages/BattlePage";
 import { TcgLobbyPage } from "./pages/TcgLobbyPage";
@@ -14,7 +15,15 @@ function App() {
       <NavBar />
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<LobbyPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route
+            path="/battle/lobby"
+            element={
+              <ProtectedRoute>
+                <BattleLobbyPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/battle/:battleId" element={<BattlePage />} />
           <Route
             path="/battle/setup"
@@ -24,7 +33,14 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/tcg" element={<TcgLobbyPage />} />
+          <Route
+            path="/tcg/lobby"
+            element={
+              <ProtectedRoute>
+                <TcgLobbyPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/tcg/battle/:battleId" element={<TcgBattlePage />} />
           <Route
             path="/tcg/setup"

@@ -59,8 +59,50 @@ function InPlayMiniCard({
   );
 }
 
-function EmptySlot({ label }: { label: string }) {
-  return <div className="tcg-mat__empty-slot">{label}</div>;
+function EmptySlot({ label, onClick }: { label: string; onClick?: () => void }) {
+  return (
+    <button type="button" className="tcg-mat__empty-slot" onClick={onClick} disabled={!onClick}>
+      {label}
+    </button>
+  );
+}
+
+const BENCH_SIZE = 5;
+
+/** Renders a side's bench as a fixed 5-slot row (not just the occupied
+ * cards) so open slots are visible as drop targets, not just implied by a
+ * shorter row. `onPlayHere`, when provided, makes every empty slot on this
+ * side clickable to play the selected hand card there - the actual play
+ * always lands in the next open bench slot server-side (see
+ * resolveAction.ts's play-basic case), so which empty slot you click doesn't
+ * matter, they're all equivalent triggers for the same action. */
+function BenchRow({
+  bench,
+  selectedInstanceId,
+  onSelect,
+  onPlayHere,
+}: {
+  bench: TcgInPlayCard[];
+  selectedInstanceId?: number;
+  onSelect?: (instanceId: number) => void;
+  onPlayHere?: () => void;
+}) {
+  return (
+    <div className="tcg-mat__bench">
+      {Array.from({ length: BENCH_SIZE }, (_, i) => bench[i]).map((card, i) =>
+        card ? (
+          <InPlayMiniCard
+            key={card.instanceId}
+            card={card}
+            selected={selectedInstanceId === card.instanceId}
+            onClick={onSelect ? () => onSelect(card.instanceId) : undefined}
+          />
+        ) : (
+          <EmptySlot key={`empty-${i}`} label={onPlayHere ? "Place here" : "Empty"} onClick={onPlayHere} />
+        ),
+      )}
+    </div>
+  );
 }
 
 /** Builds a human-readable label for a legal action, resolving cardIds/
@@ -258,6 +300,14 @@ export function TcgBattlePage() {
         (action) => action.type !== "end-turn" && actionMatchesSelection(action, selection, mine.active?.instanceId),
       )
     : [];
+  // The selected hand card's play-basic action, only offered as a bench
+  // click-target when I already have an active Pokemon - otherwise play-basic
+  // would make it my active instead (see resolveAction.ts), which the "Play
+  // X" button below still covers regardless of bench-slot clicks.
+  const benchPlayAction =
+    isMyTurn && mine.active
+      ? cardActions.find((action): action is Extract<TcgAction, { type: "play-basic" }> => action.type === "play-basic")
+      : undefined;
 
   // Stack duplicate hand cards (e.g. 3 Basic Fire Energy) into one card with
   // a "xN" badge instead of rendering each copy separately - they're
@@ -322,11 +372,7 @@ export function TcgBattlePage() {
 
           <div className="tcg-mat">
             <div className="tcg-mat__row tcg-mat__row--opponent">
-              <div className="tcg-mat__bench">
-                {theirs.bench.map((card) => (
-                  <InPlayMiniCard key={card.instanceId} card={card} />
-                ))}
-              </div>
+              <BenchRow bench={theirs.bench} />
               <div className="tcg-mat__side-info">
                 <span>Deck: {theirs.deck.length}</span>
                 <span>Hand: {theirs.hand.length}</span>
@@ -353,16 +399,12 @@ export function TcgBattlePage() {
             </div>
 
             <div className="tcg-mat__row tcg-mat__row--mine">
-              <div className="tcg-mat__bench">
-                {mine.bench.map((card) => (
-                  <InPlayMiniCard
-                    key={card.instanceId}
-                    card={card}
-                    selected={selection?.kind === "inplay" && selection.instanceId === card.instanceId}
-                    onClick={isMyTurn ? () => toggleInPlaySelection(card.instanceId) : undefined}
-                  />
-                ))}
-              </div>
+              <BenchRow
+                bench={mine.bench}
+                selectedInstanceId={selection?.kind === "inplay" ? selection.instanceId : undefined}
+                onSelect={isMyTurn ? toggleInPlaySelection : undefined}
+                onPlayHere={benchPlayAction ? () => submit(benchPlayAction) : undefined}
+              />
               <div className="tcg-mat__side-info">
                 <span>Deck: {mine.deck.length}</span>
                 <span>Prizes: {mine.prizes.length}</span>
@@ -392,8 +434,8 @@ export function TcgBattlePage() {
           {battle.status === "complete" ? (
             <div className="panel battle-result">
               <h2>{battle.winner === myTrainerId ? "You won!" : "You lost!"}</h2>
-              <button type="button" onClick={() => navigate("/tcg")}>
-                Back to TCG Lobby
+              <button type="button" onClick={() => navigate("/")}>
+                Back to Home
               </button>
             </div>
           ) : (

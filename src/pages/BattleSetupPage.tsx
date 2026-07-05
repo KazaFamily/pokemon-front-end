@@ -17,6 +17,7 @@ export function BattleSetupPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRedrawing, setIsRedrawing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -27,6 +28,21 @@ export function BattleSetupPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load your cards"))
       .finally(() => setIsLoading(false));
   }, [trainerId]);
+
+  async function handleRedraw() {
+    if (!trainerId) return;
+    setIsRedrawing(true);
+    setError(null);
+    try {
+      const { battleCards: freshCards } = await api.rerollBattleCards(trainerId);
+      setBattleCards(freshCards);
+      setSelectedIds([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to draw new cards");
+    } finally {
+      setIsRedrawing(false);
+    }
+  }
 
   function toggle(pokemonId: number) {
     setSelectedIds((prev) => {
@@ -61,7 +77,7 @@ export function BattleSetupPage() {
         <h1>Choose Your Team</h1>
         <p>You need to log in first.</p>
         <button type="button" onClick={() => navigate("/")}>
-          Go to Lobby
+          Go Home
         </button>
       </div>
     );
@@ -83,6 +99,12 @@ export function BattleSetupPage() {
           </>
         )}
       </p>
+
+      <div className="form-row">
+        <button type="button" onClick={handleRedraw} disabled={isLoading || isRedrawing}>
+          Redraw All Cards
+        </button>
+      </div>
 
       {isLoading ? (
         <p>Loading your cards…</p>

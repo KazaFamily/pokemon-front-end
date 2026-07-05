@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, isMockApi } from "../api";
 import type { Trainer } from "../types";
-import { useAuth } from "../auth/useAuth";
-import { TcgCardView } from "../components/TcgCardView";
 import { getMyTrainerId } from "../lib/myTrainer";
 import { useLobbySocket } from "../hooks/useLobbySocket";
 
@@ -11,20 +9,17 @@ const TCG_DECK_SIZE = 60;
 
 export function TcgLobbyPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [opponentId, setOpponentId] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isBusy, setIsBusy] = useState(false);
 
   const lobby = useLobbySocket("tcg");
 
   useEffect(() => {
-    if (!isAuthenticated) return;
     const trainerId = getMyTrainerId();
     if (!trainerId) return;
     api.getTrainer(trainerId).then(setTrainer).catch(() => setTrainer(null));
-  }, [isAuthenticated]);
+  }, []);
 
   useEffect(() => {
     if (lobby.matched) navigate(`/tcg/battle/${lobby.matched.battleId}`);
@@ -34,34 +29,9 @@ export function TcgLobbyPage() {
     if (lobby.needsSetup) navigate(`/tcg/setup?opponent=${encodeURIComponent(lobby.needsSetup.opponentTrainerId)}`);
   }, [lobby.needsSetup, navigate]);
 
-  async function handleReroll() {
-    if (!trainer) return;
-    setIsBusy(true);
-    setError(null);
-    try {
-      await api.rerollTcgCards(trainer.trainerId);
-      setTrainer(await api.getTrainer(trainer.trainerId));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to draw new cards");
-    } finally {
-      setIsBusy(false);
-    }
-  }
-
   function handleStartBattle() {
     if (!opponentId.trim()) return;
     navigate(`/tcg/setup?opponent=${encodeURIComponent(opponentId.trim())}`);
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="page">
-        <h1>TCG Lobby</h1>
-        <p>
-          Log in from the <Link to="/">video-game Lobby</Link> first - the same trainer plays both game modes.
-        </p>
-      </div>
-    );
   }
 
   if (!trainer) {
@@ -73,13 +43,6 @@ export function TcgLobbyPage() {
   return (
     <div className="page">
       <h1>TCG Lobby</h1>
-
-      <section className="panel">
-        <h2>{trainer.name}</h2>
-        <p>
-          Your trainer ID: <code>{trainer.trainerId}</code>
-        </p>
-      </section>
 
       {isMockApi ? (
         <section className="panel">
@@ -166,20 +129,6 @@ export function TcgLobbyPage() {
           )}
         </section>
       )}
-
-      <section className="panel">
-        <div className="panel__header">
-          <h2>Your TCG Cards</h2>
-          <button type="button" onClick={handleReroll} disabled={isBusy}>
-            Redraw
-          </button>
-        </div>
-        <div className="pokemon-grid">
-          {trainer.tcgCards.map((card, i) => (
-            <TcgCardView key={`${card.cardId}-${i}`} card={card} />
-          ))}
-        </div>
-      </section>
 
       {(error || lobby.error) && <p className="error-text">{error ?? lobby.error}</p>}
     </div>

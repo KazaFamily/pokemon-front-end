@@ -102,7 +102,7 @@ export function TcgDeckSetupPage() {
         const battle = await api.createTcgBattle(trainerId, opponentId);
         navigate(`/tcg/battle/${battle.battleId}`);
       } else {
-        navigate("/tcg");
+        navigate("/");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save your deck");
@@ -117,7 +117,7 @@ export function TcgDeckSetupPage() {
         <h1>Build Your Deck</h1>
         <p>You need to log in first.</p>
         <button type="button" onClick={() => navigate("/")}>
-          Go to Lobby
+          Go Home
         </button>
       </div>
     );

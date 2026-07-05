@@ -66,7 +66,7 @@ export function BattlePage() {
         <div className="panel battle-result">
           <h2>{battle.winner === myTrainerId ? "You won!" : "You lost!"}</h2>
           <button type="button" onClick={() => navigate("/")}>
-            Back to Lobby
+            Back to Home
           </button>
         </div>
       ) : (

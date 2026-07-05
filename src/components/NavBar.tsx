@@ -11,10 +11,7 @@ export function NavBar() {
         Poké Battle
       </Link>
       {isMockApi && <span className="nav-bar__badge">MOCK API</span>}
-      <nav className="nav-bar__links">
-        <Link to="/">Lobby</Link>
-        <Link to="/tcg">TCG</Link>
-      </nav>
+      <div className="nav-bar__links" />
       {isAuthenticated && (
         <div className="nav-bar__auth">
           <span className="nav-bar__user">{user?.name}</span>
