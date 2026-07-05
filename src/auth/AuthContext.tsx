@@ -2,22 +2,11 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { clearTokens, setTokens } from "./tokenStore";
 import { setMyTrainerId, clearMyTrainerId } from "../lib/myTrainer";
+import { getStoredAuthUser, setStoredAuthUser, clearStoredAuthUser } from "./authUser";
 import { AuthContext, type AuthContextValue, type AuthUser } from "./authContextObject";
 
-const USER_STORAGE_KEY = "pokemon.auth.user";
-
-function loadStoredUser(): AuthUser | null {
-  const raw = localStorage.getItem(USER_STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthUser;
-  } catch {
-    return null;
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(loadStoredUser);
+  const [user, setUser] = useState<AuthUser | null>(getStoredAuthUser);
 
   const signIn = useCallback(async (name: string) => {
     const { trainer, tokens } = await api.login(name);
@@ -29,14 +18,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     setMyTrainerId(trainer.trainerId);
     const authUser: AuthUser = { trainerId: trainer.trainerId, name: trainer.name };
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(authUser));
+    setStoredAuthUser(authUser);
     setUser(authUser);
   }, []);
 
   const signOut = useCallback(() => {
     clearTokens();
     clearMyTrainerId();
-    localStorage.removeItem(USER_STORAGE_KEY);
+    clearStoredAuthUser();
     setUser(null);
   }, []);
 
