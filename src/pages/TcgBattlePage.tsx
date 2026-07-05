@@ -13,9 +13,26 @@ function totalEnergy(card: TcgInPlayCard): number {
   return Object.values(card.attachedEnergy).reduce((sum: number, n) => sum + (n ?? 0), 0);
 }
 
-function InPlayMiniCard({ card, isActive }: { card: TcgInPlayCard; isActive?: boolean }) {
+function InPlayMiniCard({
+  card,
+  isActive,
+  selected,
+  onClick,
+  large,
+}: {
+  card: TcgInPlayCard;
+  isActive?: boolean;
+  selected?: boolean;
+  onClick?: () => void;
+  large?: boolean;
+}) {
   return (
-    <div className={`tcg-inplay-card${isActive ? " tcg-inplay-card--active" : ""}`}>
+    <button
+      type="button"
+      className={`tcg-inplay-card${isActive ? " tcg-inplay-card--active" : ""}${selected ? " tcg-inplay-card--selected" : ""}${large ? " tcg-inplay-card--large" : ""}`}
+      onClick={onClick}
+      disabled={!onClick}
+    >
       <div className="tcg-inplay-card__header">
         <span className="tcg-inplay-card__name">{card.name}</span>
         <span className={`type-badge type-badge--${card.energyType} tcg-inplay-card__hp`}>{card.currentHp}</span>
@@ -38,7 +55,7 @@ function InPlayMiniCard({ card, isActive }: { card: TcgInPlayCard; isActive?: bo
           ))}
         </div>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -75,6 +92,39 @@ function describeAction(action: TcgAction, catalog: Map<number, TcgCard>, mine: 
       return `Attack: ${action.attackName}`;
     case "end-turn":
       return "End Turn";
+  }
+}
+
+type Selection = { kind: "hand"; cardId: number } | { kind: "inplay"; instanceId: number };
+
+/** Whether a legal action is relevant to whatever card the player has
+ * selected - selecting a hand card surfaces every action it can take,
+ * selecting an in-play card surfaces attacks/retreat/evolve/attach-energy
+ * that target it. "end-turn" isn't tied to a card, so it's always shown. */
+function actionMatchesSelection(action: TcgAction, selection: Selection | null, myActiveInstanceId: number | undefined): boolean {
+  if (action.type === "end-turn") return true;
+  if (!selection) return false;
+
+  switch (action.type) {
+    case "play-basic":
+    case "play-item":
+    case "play-supporter":
+    case "play-stadium":
+      return selection.kind === "hand" && action.handCardId === selection.cardId;
+    case "evolve":
+      return (
+        (selection.kind === "hand" && action.handCardId === selection.cardId) ||
+        (selection.kind === "inplay" && action.targetInstanceId === selection.instanceId)
+      );
+    case "attach-energy":
+      return (
+        (selection.kind === "hand" && action.handCardId === selection.cardId) ||
+        (selection.kind === "inplay" && (action.targetInstanceId ?? myActiveInstanceId) === selection.instanceId)
+      );
+    case "retreat":
+      return selection.kind === "inplay" && action.benchInstanceId === selection.instanceId;
+    case "attack":
+      return selection.kind === "inplay" && selection.instanceId === myActiveInstanceId;
   }
 }
 
@@ -166,6 +216,16 @@ export function TcgBattlePage() {
   const [catalog, setCatalog] = useState<Map<number, TcgCard>>(new Map());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  // Drop any selected card once the turn moves on, so a stale selection (e.g.
+  // a card that's since been played) doesn't linger into the next turn. Reset
+  // during render rather than in an effect - see "Adjusting state when a prop
+  // changes" in the React docs - to avoid an extra cascading render.
+  const [lastSeenTurn, setLastSeenTurn] = useState(battle?.turn);
+  if (battle?.turn !== lastSeenTurn) {
+    setLastSeenTurn(battle?.turn);
+    setSelection(null);
+  }
 
   useEffect(() => {
     getTcgCatalog()
@@ -185,17 +245,48 @@ export function TcgBattlePage() {
   const isMyTurn = battle.status === "active" && battle.turnSide === mySide;
   const stadiumCard = battle.stadiumCardId != null ? catalog.get(battle.stadiumCardId) : undefined;
 
+  const selectedHandCard = selection?.kind === "hand" ? catalog.get(selection.cardId) : undefined;
+  const selectedInPlayCard =
+    selection?.kind === "inplay"
+      ? mine.active?.instanceId === selection.instanceId
+        ? mine.active
+        : mine.bench.find((c) => c.instanceId === selection.instanceId)
+      : undefined;
+  const endTurnAction = (battle.legalActions ?? []).find((action) => action.type === "end-turn");
+  const cardActions = selection
+    ? (battle.legalActions ?? []).filter(
+        (action) => action.type !== "end-turn" && actionMatchesSelection(action, selection, mine.active?.instanceId),
+      )
+    : [];
+
+  // Stack duplicate hand cards (e.g. 3 Basic Fire Energy) into one card with
+  // a "xN" badge instead of rendering each copy separately - they're
+  // interchangeable for every action (see actionMatchesSelection, keyed by
+  // cardId), so there's nothing lost by picking one to represent the count.
+  const handCounts = new Map<number, number>();
+  for (const cardId of mine.hand) handCounts.set(cardId, (handCounts.get(cardId) ?? 0) + 1);
+  const distinctHandCardIds = [...new Set(mine.hand)];
+
   async function submit(action: TcgAction) {
     if (!myTrainerId || !battleId) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
       await api.submitTcgAction(battleId, myTrainerId, action);
+      setSelection(null);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to submit action");
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  function toggleHandSelection(cardId: number) {
+    setSelection((prev) => (prev?.kind === "hand" && prev.cardId === cardId ? null : { kind: "hand", cardId }));
+  }
+
+  function toggleInPlaySelection(instanceId: number) {
+    setSelection((prev) => (prev?.kind === "inplay" && prev.instanceId === instanceId ? null : { kind: "inplay", instanceId }));
   }
 
   if (battle.status === "setup") {
@@ -219,84 +310,135 @@ export function TcgBattlePage() {
     <div className="page battle-page">
       <h1>TCG Battle</h1>
 
-      <section className="panel">
-        <div className="tcg-status-row">
-          <span>Your prizes remaining: <strong>{mine.prizes.length}</strong></span>
-          <span>Opponent prizes remaining: <strong>{theirs.prizes.length}</strong></span>
-          {battle.status === "active" && <TurnCountdown turnExpiresAt={battle.turnExpiresAt} />}
-        </div>
-      </section>
+      <div className="tcg-battle-layout">
+        <div className="tcg-battle-layout__main">
+          <section className="panel">
+            <div className="tcg-status-row">
+              <span>Your prizes remaining: <strong>{mine.prizes.length}</strong></span>
+              <span>Opponent prizes remaining: <strong>{theirs.prizes.length}</strong></span>
+              {battle.status === "active" && <TurnCountdown turnExpiresAt={battle.turnExpiresAt} />}
+            </div>
+          </section>
 
-      <div className="tcg-mat">
-        <div className="tcg-mat__row tcg-mat__row--opponent">
-          <div className="tcg-mat__bench">
-            {theirs.bench.map((card) => (
-              <InPlayMiniCard key={card.instanceId} card={card} />
-            ))}
-          </div>
-          <div className="tcg-mat__side-info">
-            <span>Deck: {theirs.deck.length}</span>
-            <span>Hand: {theirs.hand.length}</span>
-            <span>Prizes: {theirs.prizes.length}</span>
-          </div>
-        </div>
+          <div className="tcg-mat">
+            <div className="tcg-mat__row tcg-mat__row--opponent">
+              <div className="tcg-mat__bench">
+                {theirs.bench.map((card) => (
+                  <InPlayMiniCard key={card.instanceId} card={card} />
+                ))}
+              </div>
+              <div className="tcg-mat__side-info">
+                <span>Deck: {theirs.deck.length}</span>
+                <span>Hand: {theirs.hand.length}</span>
+                <span>Prizes: {theirs.prizes.length}</span>
+              </div>
+            </div>
 
-        <div className="tcg-mat__row tcg-mat__row--field">
-          {stadiumCard ? <TcgCardView card={stadiumCard} /> : <EmptySlot label="No Stadium" />}
-          <div className="tcg-mat__active-stack">
-            {theirs.active ? <InPlayMiniCard card={theirs.active} isActive /> : <EmptySlot label="Opponent's Active" />}
-            <span className="tcg-mat__vs">VS</span>
-            {mine.active ? <InPlayMiniCard card={mine.active} isActive /> : <EmptySlot label="Your Active" />}
-          </div>
-        </div>
+            <div className="tcg-mat__row tcg-mat__row--field">
+              {stadiumCard ? <TcgCardView card={stadiumCard} /> : <EmptySlot label="No Stadium" />}
+              <div className="tcg-mat__active-stack">
+                {theirs.active ? <InPlayMiniCard card={theirs.active} isActive /> : <EmptySlot label="Opponent's Active" />}
+                <span className="tcg-mat__vs">VS</span>
+                {mine.active ? (
+                  <InPlayMiniCard
+                    card={mine.active}
+                    isActive
+                    selected={selection?.kind === "inplay" && selection.instanceId === mine.active.instanceId}
+                    onClick={isMyTurn ? () => toggleInPlaySelection(mine.active!.instanceId) : undefined}
+                  />
+                ) : (
+                  <EmptySlot label="Your Active" />
+                )}
+              </div>
+            </div>
 
-        <div className="tcg-mat__row tcg-mat__row--mine">
-          <div className="tcg-mat__bench">
-            {mine.bench.map((card) => (
-              <InPlayMiniCard key={card.instanceId} card={card} />
-            ))}
+            <div className="tcg-mat__row tcg-mat__row--mine">
+              <div className="tcg-mat__bench">
+                {mine.bench.map((card) => (
+                  <InPlayMiniCard
+                    key={card.instanceId}
+                    card={card}
+                    selected={selection?.kind === "inplay" && selection.instanceId === card.instanceId}
+                    onClick={isMyTurn ? () => toggleInPlaySelection(card.instanceId) : undefined}
+                  />
+                ))}
+              </div>
+              <div className="tcg-mat__side-info">
+                <span>Deck: {mine.deck.length}</span>
+                <span>Prizes: {mine.prizes.length}</span>
+              </div>
+            </div>
           </div>
-          <div className="tcg-mat__side-info">
-            <span>Deck: {mine.deck.length}</span>
-            <span>Prizes: {mine.prizes.length}</span>
-          </div>
-        </div>
-      </div>
 
-      {mine.hand.length > 0 && (
-        <section className="panel">
-          <div className="muted">Your hand ({mine.hand.length} cards):</div>
-          <div className="tcg-hand-row">
-            {mine.hand.map((cardId, i) => (catalog.has(cardId) ? <TcgCardView key={i} card={catalog.get(cardId)!} /> : null))}
-          </div>
-        </section>
-      )}
+          {mine.hand.length > 0 && (
+            <section className="panel">
+              <div className="muted">Your hand ({mine.hand.length} cards):</div>
+              <div className="tcg-hand-row">
+                {distinctHandCardIds.map((cardId) =>
+                  catalog.has(cardId) ? (
+                    <TcgCardView
+                      key={cardId}
+                      card={catalog.get(cardId)!}
+                      count={handCounts.get(cardId)}
+                      selected={selection?.kind === "hand" && selection.cardId === cardId}
+                      onClick={isMyTurn ? () => toggleHandSelection(cardId) : undefined}
+                    />
+                  ) : null,
+                )}
+              </div>
+            </section>
+          )}
 
-      {battle.status === "complete" ? (
-        <div className="panel battle-result">
-          <h2>{battle.winner === myTrainerId ? "You won!" : "You lost!"}</h2>
-          <button type="button" onClick={() => navigate("/tcg")}>
-            Back to TCG Lobby
-          </button>
-        </div>
-      ) : (
-        <div className="panel">
-          <div className="battle-turn-indicator">{isMyTurn ? "Your turn!" : "Waiting on your opponent…"}</div>
+          {battle.status === "complete" ? (
+            <div className="panel battle-result">
+              <h2>{battle.winner === myTrainerId ? "You won!" : "You lost!"}</h2>
+              <button type="button" onClick={() => navigate("/tcg")}>
+                Back to TCG Lobby
+              </button>
+            </div>
+          ) : (
+            <div className="panel">
+              <div className="battle-turn-indicator">{isMyTurn ? "Your turn!" : "Waiting on your opponent…"}</div>
 
-          {isMyTurn && (
-            <div className="tcg-actions">
-              {(battle.legalActions ?? []).map((action, i) => (
-                <button key={i} type="button" onClick={() => submit(action)} disabled={isSubmitting}>
-                  {describeAction(action, catalog, mine)}
-                </button>
-              ))}
+              {isMyTurn && (
+                <div className="tcg-actions">
+                  {selection ? (
+                    <div className="tcg-selected-card">
+                      <div className="tcg-selected-card__card">
+                        {selectedHandCard && <TcgCardView card={selectedHandCard} size="large" />}
+                        {selectedInPlayCard && <InPlayMiniCard card={selectedInPlayCard} large />}
+                      </div>
+                      <div className="tcg-selected-card__actions">
+                        {cardActions.length > 0 ? (
+                          cardActions.map((action, i) => (
+                            <button key={i} type="button" onClick={() => submit(action)} disabled={isSubmitting}>
+                              {describeAction(action, catalog, mine)}
+                            </button>
+                          ))
+                        ) : (
+                          <p className="muted">No actions available for this card right now.</p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="muted">Select a card above to see what you can do with it.</p>
+                  )}
+                  {endTurnAction && (
+                    <button type="button" className="tcg-end-turn" onClick={() => submit(endTurnAction)} disabled={isSubmitting}>
+                      End Turn
+                    </button>
+                  )}
+                </div>
+              )}
+              {submitError && <p className="error-text">{submitError}</p>}
             </div>
           )}
-          {submitError && <p className="error-text">{submitError}</p>}
         </div>
-      )}
 
-      <BattleLog entries={battle.log} />
+        <aside className="tcg-battle-layout__sidebar">
+          <BattleLog entries={battle.log} />
+        </aside>
+      </div>
     </div>
   );
 }

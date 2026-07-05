@@ -174,7 +174,7 @@ export function TcgDeckSetupPage() {
             ) : (
               <div className="pokemon-grid">
                 {deckEntries.map(([cardId, count]) => (
-                  <TcgCardView key={cardId} card={catalog.get(cardId)!} countInDeck={count} onClick={() => removeCard(cardId)} />
+                  <TcgCardView key={cardId} card={catalog.get(cardId)!} count={count} onClick={() => removeCard(cardId)} />
                 ))}
               </div>
             )}
@@ -193,7 +193,7 @@ export function TcgDeckSetupPage() {
             {search.trim().length >= 2 && (
               <div className="pokemon-grid">
                 {searchResults.map((card) => (
-                  <TcgCardView key={card.cardId} card={card} countInDeck={counts.get(card.cardId)} onClick={() => addCard(card.cardId)} />
+                  <TcgCardView key={card.cardId} card={card} count={counts.get(card.cardId)} onClick={() => addCard(card.cardId)} />
                 ))}
               </div>
             )}

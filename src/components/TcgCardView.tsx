@@ -4,8 +4,11 @@ interface TcgCardViewProps {
   card: TcgCard;
   selected?: boolean;
   onClick?: () => void;
-  /** Shown as a small badge (e.g. deck-builder "x3") - omitted when undefined/0. */
-  countInDeck?: number;
+  /** Shown as a small "xN" badge for stacked identical copies (deck-builder,
+   * hand) - omitted when undefined/0. */
+  count?: number;
+  /** Renders a bigger version for a focused/zoomed-in detail view. */
+  size?: "large";
 }
 
 export function CostBadge({ symbol }: { symbol: TcgAttackCostSymbol }) {
@@ -28,18 +31,18 @@ const RULE_TAG_LABEL: Record<Exclude<TcgRuleTag, "none">, string> = {
   "ace-spec": "ACE SPEC",
 };
 
-export function TcgCardView({ card, selected, onClick, countInDeck }: TcgCardViewProps) {
+export function TcgCardView({ card, selected, onClick, count, size }: TcgCardViewProps) {
   return (
     <button
       type="button"
-      className={`pokemon-card tcg-card${selected ? " pokemon-card--selected" : ""}`}
+      className={`pokemon-card tcg-card${selected ? " pokemon-card--selected" : ""}${size === "large" ? " pokemon-card--large" : ""}`}
       onClick={onClick}
       disabled={!onClick}
     >
       {card.spriteUrl && <img className="pokemon-card__sprite" src={card.spriteUrl} alt={card.name} loading="lazy" />}
       <div className="pokemon-card__name">
         {card.name}
-        {!!countInDeck && <span className="tcg-card__count"> ×{countInDeck}</span>}
+        {!!count && <span className="tcg-card__count"> ×{count}</span>}
       </div>
       <div className="pokemon-card__types">
         <span className="type-badge">{CATEGORY_LABEL[card.category]}</span>

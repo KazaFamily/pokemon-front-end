@@ -226,9 +226,36 @@ a {
   background: #2a2716;
 }
 
+.pokemon-card--large {
+  width: 240px;
+  padding: 20px 16px;
+  gap: 10px;
+}
+
+.pokemon-card--large .pokemon-card__sprite {
+  width: 140px;
+  height: 140px;
+}
+
+.pokemon-card--large .pokemon-card__name {
+  font-size: 20px;
+}
+
+.pokemon-card--large .pokemon-card__stats,
+.pokemon-card--large .tcg-card__meta,
+.pokemon-card--large .tcg-card__attacks {
+  font-size: 13px;
+}
+
+.pokemon-card--large .type-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
 .pokemon-card__sprite {
   width: 72px;
   height: 72px;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 
@@ -418,9 +445,39 @@ a {
 
 .tcg-actions {
   display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tcg-selected-card {
+  display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.tcg-selected-card__card {
+  flex-shrink: 0;
+}
+
+.tcg-selected-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 180px;
+  align-self: center;
+}
+
+.tcg-selected-card__actions button {
+  text-align: left;
+}
+
+.tcg-end-turn {
+  align-self: flex-start;
 }
 
 .tcg-hand-row {
@@ -520,6 +577,41 @@ a {
   border-color: var(--accent-2);
 }
 
+.tcg-inplay-card--large {
+  width: 240px;
+  padding: 18px;
+  gap: 10px;
+}
+
+.tcg-inplay-card--large .tcg-inplay-card__sprite {
+  width: 140px;
+  height: 140px;
+}
+
+.tcg-inplay-card--large .tcg-inplay-card__name {
+  font-size: 18px;
+}
+
+.tcg-inplay-card--large .tcg-card__attacks {
+  font-size: 13px;
+}
+
+.tcg-inplay-card--selected {
+  border-color: var(--accent);
+  background: #2a2716;
+}
+
+/* These represent board state, not disabled controls - stay fully visible
+   even when not clickable (opponent's cards, or it's not your turn). */
+.tcg-inplay-card:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.tcg-inplay-card:not(:disabled):hover {
+  border-color: var(--accent-2);
+}
+
 .tcg-inplay-card__header {
   display: flex;
   justify-content: space-between;
@@ -546,6 +638,7 @@ a {
   align-self: center;
   width: 64px;
   height: 64px;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 
@@ -565,6 +658,41 @@ a {
   gap: 6px;
 }
 
+/* Battle mat + log side-by-side layout */
+
+.app-main:has(.battle-page) {
+  max-width: 1240px;
+}
+
+.tcg-battle-layout {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.tcg-battle-layout__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.tcg-battle-layout__sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 20px;
+}
+
+@media (max-width: 900px) {
+  .tcg-battle-layout {
+    flex-direction: column;
+  }
+
+  .tcg-battle-layout__sidebar {
+    width: 100%;
+    position: static;
+  }
+}
+
 /* Battle log */
 
 .battle-log {
@@ -581,7 +709,7 @@ a {
 }
 
 .battle-log__entries {
-  max-height: 180px;
+  max-height: 500px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

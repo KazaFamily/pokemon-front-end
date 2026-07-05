@@ -93,7 +93,7 @@ const MOCK_TCG_CATALOG: TcgCard[] = [
   {
     cardId: 1,
     name: "Bulbasaur",
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/1.png",
+    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png",
     category: "pokemon",
     stage: "basic",
     evolvesFrom: null,
@@ -108,7 +108,7 @@ const MOCK_TCG_CATALOG: TcgCard[] = [
   {
     cardId: 4,
     name: "Charmander",
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png",
+    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png",
     category: "pokemon",
     stage: "basic",
     evolvesFrom: null,
@@ -123,7 +123,7 @@ const MOCK_TCG_CATALOG: TcgCard[] = [
   {
     cardId: 5,
     name: "Charmeleon",
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/5.png",
+    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/5.png",
     category: "pokemon",
     stage: "stage1",
     evolvesFrom: "Charmander",
@@ -138,7 +138,7 @@ const MOCK_TCG_CATALOG: TcgCard[] = [
   {
     cardId: 7,
     name: "Squirtle",
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png",
+    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png",
     category: "pokemon",
     stage: "basic",
     evolvesFrom: null,
@@ -153,7 +153,7 @@ const MOCK_TCG_CATALOG: TcgCard[] = [
   {
     cardId: 25,
     name: "Pikachu",
-    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png",
+    spriteUrl: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png",
     category: "pokemon",
     stage: "basic",
     evolvesFrom: null,
