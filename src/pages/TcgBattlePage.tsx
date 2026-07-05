@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useTcgBattleState } from "../hooks/useTcgBattleState";
 import { HPBar } from "../components/HPBar";
 import { BattleLog } from "../components/BattleLog";
-import { TcgCardView } from "../components/TcgCardView";
+import { TcgCardView, CostBadge } from "../components/TcgCardView";
 import { api } from "../api";
 import type { TcgAction, TcgCard, TcgInPlayCard, TcgSideState } from "../types";
 import { getMyTrainerId } from "../lib/myTrainer";
@@ -13,17 +13,37 @@ function totalEnergy(card: TcgInPlayCard): number {
   return Object.values(card.attachedEnergy).reduce((sum: number, n) => sum + (n ?? 0), 0);
 }
 
-function InPlayCardView({ card, label }: { card: TcgInPlayCard; label: string }) {
+function InPlayMiniCard({ card, isActive }: { card: TcgInPlayCard; isActive?: boolean }) {
   return (
-    <div className="battle-side">
-      <h3>{label}</h3>
-      <div className="battle-side__name">
-        {card.name} <span className="muted">({card.energyType})</span>
+    <div className={`tcg-inplay-card${isActive ? " tcg-inplay-card--active" : ""}`}>
+      <div className="tcg-inplay-card__header">
+        <span className="tcg-inplay-card__name">{card.name}</span>
+        <span className={`type-badge type-badge--${card.energyType} tcg-inplay-card__hp`}>{card.currentHp}</span>
       </div>
+      {card.spriteUrl && <img className="tcg-inplay-card__sprite" src={card.spriteUrl} alt={card.name} loading="lazy" />}
       <HPBar current={card.currentHp} max={card.maxHp} />
-      <div className="muted">⚡ {totalEnergy(card)} energy attached</div>
+      <div className="tcg-inplay-card__footer">
+        <span className="muted">⚡ ×{totalEnergy(card)}</span>
+        <span className="muted">Retreat {card.retreatCost}</span>
+      </div>
+      {card.attacks.length > 0 && (
+        <div className="tcg-card__attacks">
+          {card.attacks.map((attack) => (
+            <div key={attack.name} className="tcg-card__attack">
+              {attack.name}{" "}
+              <span className="muted">
+                ({attack.cost.map((symbol, i) => <CostBadge key={i} symbol={symbol} />)} · {attack.damage} dmg)
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+function EmptySlot({ label }: { label: string }) {
+  return <div className="tcg-mat__empty-slot">{label}</div>;
 }
 
 /** Builds a human-readable label for a legal action, resolving cardIds/
@@ -163,6 +183,7 @@ export function TcgBattlePage() {
   const mine = battle[mySide];
   const theirs = battle[theirSide];
   const isMyTurn = battle.status === "active" && battle.turnSide === mySide;
+  const stadiumCard = battle.stadiumCardId != null ? catalog.get(battle.stadiumCardId) : undefined;
 
   async function submit(action: TcgAction) {
     if (!myTrainerId || !battleId) return;
@@ -198,38 +219,58 @@ export function TcgBattlePage() {
     <div className="page battle-page">
       <h1>TCG Battle</h1>
 
-      <div className="battle-arena">
-        {theirs.active ? <InPlayCardView card={theirs.active} label="Opponent" /> : <div className="battle-side"><h3>Opponent</h3><p className="muted">No active card</p></div>}
-        {mine.active ? <InPlayCardView card={mine.active} label="You" /> : <div className="battle-side"><h3>You</h3><p className="muted">No active card</p></div>}
-      </div>
-
       <section className="panel">
         <div className="tcg-status-row">
           <span>Your prizes remaining: <strong>{mine.prizes.length}</strong></span>
           <span>Opponent prizes remaining: <strong>{theirs.prizes.length}</strong></span>
           {battle.status === "active" && <TurnCountdown turnExpiresAt={battle.turnExpiresAt} />}
         </div>
-        {mine.bench.length > 0 && (
-          <div className="tcg-bench">
-            <div className="muted">Your bench:</div>
-            <div className="tcg-bench__cards">
-              {mine.bench.map((card) => (
-                <div key={card.instanceId} className="tcg-bench__card">
-                  {card.name} ({card.currentHp}/{card.maxHp} HP)
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {mine.hand.length > 0 && (
-          <div className="tcg-hand">
-            <div className="muted">Your hand ({mine.hand.length} cards):</div>
-            <div className="pokemon-grid">
-              {mine.hand.map((cardId, i) => (catalog.has(cardId) ? <TcgCardView key={i} card={catalog.get(cardId)!} /> : null))}
-            </div>
-          </div>
-        )}
       </section>
+
+      <div className="tcg-mat">
+        <div className="tcg-mat__row tcg-mat__row--opponent">
+          <div className="tcg-mat__bench">
+            {theirs.bench.map((card) => (
+              <InPlayMiniCard key={card.instanceId} card={card} />
+            ))}
+          </div>
+          <div className="tcg-mat__side-info">
+            <span>Deck: {theirs.deck.length}</span>
+            <span>Hand: {theirs.hand.length}</span>
+            <span>Prizes: {theirs.prizes.length}</span>
+          </div>
+        </div>
+
+        <div className="tcg-mat__row tcg-mat__row--field">
+          {stadiumCard ? <TcgCardView card={stadiumCard} /> : <EmptySlot label="No Stadium" />}
+          <div className="tcg-mat__active-stack">
+            {theirs.active ? <InPlayMiniCard card={theirs.active} isActive /> : <EmptySlot label="Opponent's Active" />}
+            <span className="tcg-mat__vs">VS</span>
+            {mine.active ? <InPlayMiniCard card={mine.active} isActive /> : <EmptySlot label="Your Active" />}
+          </div>
+        </div>
+
+        <div className="tcg-mat__row tcg-mat__row--mine">
+          <div className="tcg-mat__bench">
+            {mine.bench.map((card) => (
+              <InPlayMiniCard key={card.instanceId} card={card} />
+            ))}
+          </div>
+          <div className="tcg-mat__side-info">
+            <span>Deck: {mine.deck.length}</span>
+            <span>Prizes: {mine.prizes.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {mine.hand.length > 0 && (
+        <section className="panel">
+          <div className="muted">Your hand ({mine.hand.length} cards):</div>
+          <div className="tcg-hand-row">
+            {mine.hand.map((cardId, i) => (catalog.has(cardId) ? <TcgCardView key={i} card={catalog.get(cardId)!} /> : null))}
+          </div>
+        </section>
+      )}
 
       {battle.status === "complete" ? (
         <div className="panel battle-result">
